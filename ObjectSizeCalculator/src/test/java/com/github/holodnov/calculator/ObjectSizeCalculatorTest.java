@@ -1,4 +1,4 @@
-package com.github.calculator;
+package com.github.holodnov.calculator;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;

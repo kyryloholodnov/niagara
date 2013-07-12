@@ -1,4 +1,4 @@
-package com.github.calculator;
+package com.github.holodnov.calculator;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
