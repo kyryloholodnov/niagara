@@ -1,6 +1,6 @@
 package com.github.holodnov.careercup;
 
-import static com.github.holodnov.careercup.Bishop.findShortestWay;
+import static com.github.holodnov.careercup.Knight.findShortestWay;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
@@ -12,19 +12,17 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- * @see <a
- *      href="http://www.careercup.com/question?id=5598833467719680">http://www.careercup.com/question?id=5598833467719680</a>
  * 
  * @author Kyrylo Holodnov
  */
 @RunWith(Parameterized.class)
-public class BishopTest {
+public class KnightTest {
 
     private String from;
     private String to;
     private int expected;
 
-    public BishopTest(String from, String to, int expected) {
+    public KnightTest(String from, String to, int expected) {
 	this.from = from;
 	this.to = to;
 	this.expected = expected;
@@ -33,14 +31,13 @@ public class BishopTest {
     @Parameterized.Parameters
     public static Collection<Object[]> instancesToTest() {
 	return Arrays.asList(new Object[] { "a1", "a1", 0 }, new Object[] {
-		"a1", "b2", 1 }, new Object[] { "b2", "a1", 1 }, new Object[] {
+		"a1", "b3", 1 }, new Object[] { "b3", "a1", 1 }, new Object[] {
 		"a1", "c1", 2 }, new Object[] { "c1", "a1", 2 }, new Object[] {
-		"a1", "h8", 1 }, new Object[] { "h8", "a1", 1 }, new Object[] {
-		"a1", "h7", -1 }, new Object[] { "h7", "a1", -1 },
-		new Object[] { "a2", "h8", -1 },
-		new Object[] { "h8", "a2", -1 },
-		new Object[] { "a2", "h7", 2 }, new Object[] { "h7", "a2", 2 },
-		new Object[] { "h8", "h8", 0 });
+		"a1", "h8", 6 }, new Object[] { "h8", "a1", 6 }, new Object[] {
+		"a1", "h7", 5 }, new Object[] { "h7", "a1", 5 }, new Object[] {
+		"a2", "h8", 5 }, new Object[] { "h8", "a2", 5 }, new Object[] {
+		"a2", "h7", 4 }, new Object[] { "h7", "a2", 4 }, new Object[] {
+		"h8", "h8", 0 });
     }
 
     @Test(expected = IllegalArgumentException.class)

@@ -7,12 +7,10 @@ import java.util.List;
 import java.util.Queue;
 
 /**
- * @see <a
- *      href="http://www.careercup.com/question?id=5598833467719680">http://www.careercup.com/question?id=5598833467719680</a>
  * 
  * @author Kyrylo Holodnov
  */
-public class Bishop {
+public class Knight {
     private final static int BOARD_SIZE = 8;
 
     public static int findShortestWay(String start, String end) {
@@ -40,15 +38,21 @@ public class Bishop {
 	NonDirectedGraph graph = new NonDirectedGraph(BOARD_SIZE * BOARD_SIZE);
 	for (int i = 0; i < BOARD_SIZE; i++) {
 	    for (int j = 0; j < BOARD_SIZE; j++) {
-		for (int k = 1; k < BOARD_SIZE; k++) {
-		    if ((i + k < BOARD_SIZE) && (j + k < BOARD_SIZE)) {
-			graph.addEdge(BOARD_SIZE * i + j, BOARD_SIZE * (i + k)
-				+ (j + k));
-		    }
-		    if ((i + k < BOARD_SIZE) && (j - k >= 0)) {
-			graph.addEdge(BOARD_SIZE * i + j, BOARD_SIZE * (i + k)
-				+ (j - k));
-		    }
+		if ((i - 2 >= 0) && (j - 1 >= 0)) {
+		    graph.addEdge(BOARD_SIZE * (i - 2) + (j - 1), BOARD_SIZE
+			    * i + j);
+		}
+		if ((i - 2 >= 0) && (j + 1 < BOARD_SIZE)) {
+		    graph.addEdge(BOARD_SIZE * (i - 2) + (j + 1), BOARD_SIZE
+			    * i + j);
+		}
+		if ((i - 1 >= 0) && (j - 2 >= 0)) {
+		    graph.addEdge(BOARD_SIZE * (i - 1) + (j - 2), BOARD_SIZE
+			    * i + j);
+		}
+		if ((i - 1 >= 0) && (j + 2 < BOARD_SIZE)) {
+		    graph.addEdge(BOARD_SIZE * (i - 1) + (j + 2), BOARD_SIZE
+			    * i + j);
 		}
 	    }
 	}
