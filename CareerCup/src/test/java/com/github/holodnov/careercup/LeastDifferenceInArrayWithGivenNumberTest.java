@@ -57,4 +57,25 @@ public class LeastDifferenceInArrayWithGivenNumberTest {
 		13, 15 }, 5);
 	assertThat("Unexpected result", res, is(5));
     }
+
+    @Test
+    public void testGetElementWithLeastDifference6() {
+	int res = getElementWithLeastDifference(new int[] { 1, 4, 5, 7, 9, 11,
+		13, 15 }, 14);
+	assertThat("Unexpected result", res, is(13));
+    }
+
+    @Test
+    public void testGetElementWithLeastDifference7() {
+	int res = getElementWithLeastDifference(new int[] { 1, 4, 5, 7, 9, 11,
+		13, 15 }, 15);
+	assertThat("Unexpected result", res, is(15));
+    }
+
+    @Test
+    public void testGetElementWithLeastDifference8() {
+	int res = getElementWithLeastDifference(new int[] { 1, 4, 5, 7, 9, 11,
+		13, 15 }, 20);
+	assertThat("Unexpected result", res, is(15));
+    }
 }
