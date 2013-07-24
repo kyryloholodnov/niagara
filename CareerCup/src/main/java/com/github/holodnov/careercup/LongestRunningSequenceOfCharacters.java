@@ -13,6 +13,9 @@ import java.util.Map;
  */
 public class LongestRunningSequenceOfCharacters {
     public static CharAndInteger getLongestRunningSequence(String[] strs) {
+	if ((strs == null) || (strs.length == 0)) {
+	    return null;
+	}
 	Map<Character, Integer> initial = new HashMap<Character, Integer>();
 	List<StringStat> statistic = new ArrayList<StringStat>();
 	for (int i = 0; i < strs.length; i++) {

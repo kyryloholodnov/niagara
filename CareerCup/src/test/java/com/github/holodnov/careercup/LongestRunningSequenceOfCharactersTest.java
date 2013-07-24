@@ -16,6 +16,13 @@ import com.github.holodnov.careercup.LongestRunningSequenceOfCharacters.CharAndI
  * @author Kyrylo Holodnov
  */
 public class LongestRunningSequenceOfCharactersTest {
+
+    @Test
+    public void testGetLongestRunningSequenceNullArray() {
+	CharAndInteger res = getLongestRunningSequence(null);
+	assertNull(res);
+    }
+
     @Test
     public void testGetLongestRunningSequenceEmptyArray() {
 	CharAndInteger res = getLongestRunningSequence(new String[0]);
@@ -83,5 +90,33 @@ public class LongestRunningSequenceOfCharactersTest {
 	CharAndInteger res = getLongestRunningSequence(new String[] { "aaaab",
 		"bbbb", "ccc", "bbaa" });
 	assertThat(res, is(new CharAndInteger('b', 7)));
+    }
+
+    @Test
+    public void testGetLongestRunningSequence9() {
+	CharAndInteger res = getLongestRunningSequence(new String[] { "aaaaa",
+		"bbaab", "bbbb" });
+	assertThat(res, is(new CharAndInteger('b', 6)));
+    }
+
+    @Test
+    public void testGetLongestRunningSequence10() {
+	CharAndInteger res = getLongestRunningSequence(new String[] { "aaaaa",
+		"bbaaa", "bbbb" });
+	assertThat(res, is(new CharAndInteger('a', 8)));
+    }
+
+    @Test
+    public void testGetLongestRunningSequence11() {
+	CharAndInteger res = getLongestRunningSequence(new String[] { "aaaaa",
+		"ba", "ab", "bbbb" });
+	assertThat(res, is(new CharAndInteger('a', 7)));
+    }
+
+    @Test
+    public void testGetLongestRunningSequence12() {
+	CharAndInteger res = getLongestRunningSequence(new String[] { "aaaaaa",
+		"bbbbb", "abb", "caab" });
+	assertThat(res, is(new CharAndInteger('a', 7)));
     }
 }
