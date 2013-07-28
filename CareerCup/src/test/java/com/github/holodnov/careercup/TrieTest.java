@@ -128,6 +128,29 @@ public class TrieTest {
     }
 
     @Test
+    public void testContainsAsPrefix1() {
+	Trie trie = new Trie();
+	assertFalse(trie.containsAsPrefix(""));
+	trie.insertWord("a");
+	assertTrue(trie.containsAsPrefix(""));
+    }
+
+    @Test
+    public void testContainsAsPrefix2() {
+	Trie trie = new Trie();
+	trie.insertWord("");
+	trie.insertWord("abc");
+	trie.insertWord("abcde");
+	assertTrue(trie.containsAsPrefix(""));
+	assertTrue(trie.containsAsPrefix("ab"));
+	assertTrue(trie.containsAsPrefix("abc"));
+	assertTrue(trie.containsAsPrefix("abcd"));
+	assertTrue(trie.containsAsPrefix("abcde"));
+	assertFalse(trie.containsAsPrefix("abcdef"));
+	assertFalse(trie.containsAsPrefix("bcde"));
+    }
+
+    @Test
     public void testGetSizeEmptyTrie() {
 	Trie trie = new Trie();
 	assertThat(trie.getSize(), is(0));

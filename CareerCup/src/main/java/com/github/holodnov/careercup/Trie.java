@@ -53,6 +53,9 @@ public class Trie {
 	if (s == null) {
 	    throw new IllegalArgumentException("Input string is null");
 	}
+	if (size == 0) {
+	    return false;
+	}
 	TrieNode node = parent;
 	for (int i = 0; i < s.length(); i++) {
 	    node = node.getChildOrNull(s.charAt(i));
@@ -61,6 +64,33 @@ public class Trie {
 	    }
 	}
 	return node.endOfWord;
+    }
+
+    /**
+     * Tests if current Trie already contains word such that input word is
+     * prefix of word in Trie.
+     * 
+     * @param s
+     *            input word
+     * @throws IllegalArgumentException
+     *             if input word is null or contains character not in
+     *             [a-zA-Z0-9]
+     */
+    public boolean containsAsPrefix(String s) {
+	if (s == null) {
+	    throw new IllegalArgumentException("Input string is null");
+	}
+	if (size == 0) {
+	    return false;
+	}
+	TrieNode node = parent;
+	for (int i = 0; i < s.length(); i++) {
+	    node = node.getChildOrNull(s.charAt(i));
+	    if (node == null) {
+		return false;
+	    }
+	}
+	return true;
     }
 
     public int getSize() {
