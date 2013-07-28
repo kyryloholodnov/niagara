@@ -151,6 +151,43 @@ public class TrieTest {
     }
 
     @Test
+    public void testContaintsPrefixOf1() {
+	Trie trie = new Trie();
+	assertFalse(trie.containsPrefixOf(""));
+	assertFalse(trie.containsPrefixOf("a"));
+	assertFalse(trie.containsPrefixOf("abc"));
+	trie.insertWord("abc");
+	trie.insertWord("abcde");
+	assertFalse(trie.containsPrefixOf(""));
+	assertFalse(trie.containsPrefixOf("a"));
+	assertFalse(trie.containsPrefixOf("b"));
+	assertFalse(trie.containsPrefixOf("ab"));
+	assertTrue(trie.containsPrefixOf("abc"));
+	assertTrue(trie.containsPrefixOf("abcd"));
+	assertTrue(trie.containsPrefixOf("abce"));
+	assertTrue(trie.containsPrefixOf("abcf"));
+	assertFalse(trie.containsPrefixOf("abd"));
+	trie.insertWord("");
+	assertTrue(trie.containsPrefixOf("abd"));
+    }
+
+    @Test
+    public void testContaintsPrefixOf2() {
+	Trie trie = new Trie();
+	assertFalse(trie.containsPrefixOf("abcdefgh"));
+	trie.insertWord("abcdefgh");
+	assertFalse(trie.containsPrefixOf("a"));
+	assertFalse(trie.containsPrefixOf("ab"));
+	assertFalse(trie.containsPrefixOf("abc"));
+	assertFalse(trie.containsPrefixOf("abcd"));
+	assertFalse(trie.containsPrefixOf("abcde"));
+	assertFalse(trie.containsPrefixOf("abcdef"));
+	assertFalse(trie.containsPrefixOf("abcdefg"));
+	assertTrue(trie.containsPrefixOf("abcdefgh"));
+	assertFalse(trie.containsPrefixOf("abcdefgk"));
+    }
+
+    @Test
     public void testGetSizeEmptyTrie() {
 	Trie trie = new Trie();
 	assertThat(trie.getSize(), is(0));

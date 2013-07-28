@@ -93,6 +93,39 @@ public class Trie {
 	return true;
     }
 
+    /**
+     * Tests if current Trie already contains word such that this word is prefix
+     * of input word.
+     * 
+     * @param s
+     *            input word
+     * @throws IllegalArgumentException
+     *             if input word is null or contains character not in
+     *             [a-zA-Z0-9]
+     */
+    public boolean containsPrefixOf(String s) {
+	if (s == null) {
+	    throw new IllegalArgumentException("Input string is null");
+	}
+	if (size == 0) {
+	    return false;
+	}
+	if (containsWord("")) {
+	    return true;
+	}
+	TrieNode node = parent;
+	for (int i = 0; i < s.length(); i++) {
+	    node = node.getChildOrNull(s.charAt(i));
+	    if (node == null) {
+		return false;
+	    }
+	    if (node.endOfWord) {
+		return true;
+	    }
+	}
+	return false;
+    }
+
     public int getSize() {
 	return size;
     }
