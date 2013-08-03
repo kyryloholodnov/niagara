@@ -1,6 +1,7 @@
 package com.github.holodnov.javaee7webservices.model;
 
 import java.io.Serializable;
+
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -20,7 +21,7 @@ import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- *
+ * 
  * @author Kyrylo Holodnov
  */
 @Entity
@@ -28,12 +29,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 @SequenceGenerator(name = "seq_gen", sequenceName = "hibernate_sequence", allocationSize = 1)
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "EsUser.findAll", query = "SELECT e FROM EsUser e"),
-    @NamedQuery(name = "EsUser.findById", query = "SELECT e FROM EsUser e WHERE e.id = :id"),
-    @NamedQuery(name = "EsUser.findByLogin", query = "SELECT e FROM EsUser e WHERE e.login = :login"),
-    @NamedQuery(name = "EsUser.findByPassword", query = "SELECT e FROM EsUser e WHERE e.password = :password"),
-    @NamedQuery(name = "EsUser.findByEmail", query = "SELECT e FROM EsUser e WHERE e.email = :email"),
-    @NamedQuery(name = "EsUser.findByDescription", query = "SELECT e FROM EsUser e WHERE e.description = :description")})
+	@NamedQuery(name = "EsUser.findAll", query = "SELECT e FROM EsUser e"),
+	@NamedQuery(name = "EsUser.findById", query = "SELECT e FROM EsUser e WHERE e.id = :id"),
+	@NamedQuery(name = "EsUser.findByLogin", query = "SELECT e FROM EsUser e WHERE e.login = :login"),
+	@NamedQuery(name = "EsUser.findByPassword", query = "SELECT e FROM EsUser e WHERE e.password = :password"),
+	@NamedQuery(name = "EsUser.findByEmail", query = "SELECT e FROM EsUser e WHERE e.email = :email"),
+	@NamedQuery(name = "EsUser.findByDescription", query = "SELECT e FROM EsUser e WHERE e.description = :description") })
 public class EsUser implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -71,93 +72,95 @@ public class EsUser implements Serializable {
     }
 
     public EsUser(Long id) {
-        this.id = id;
+	this.id = id;
     }
 
     public EsUser(Long id, String login, String password, String email) {
-        this.id = id;
-        this.login = login;
-        this.password = password;
-        this.email = email;
+	this.id = id;
+	this.login = login;
+	this.password = password;
+	this.email = email;
     }
 
     public Long getId() {
-        return id;
+	return id;
     }
 
     public void setId(Long id) {
-        this.id = id;
+	this.id = id;
     }
 
     public String getLogin() {
-        return login;
+	return login;
     }
 
     public void setLogin(String login) {
-        this.login = login;
+	this.login = login;
     }
 
     public String getPassword() {
-        return password;
+	return password;
     }
 
     public void setPassword(String password) {
-        this.password = password;
+	this.password = password;
     }
 
     public String getEmail() {
-        return email;
+	return email;
     }
 
     public void setEmail(String email) {
-        this.email = email;
+	this.email = email;
     }
 
     public String getBiography() {
-        return biography;
+	return biography;
     }
 
     public void setBiography(String biography) {
-        this.biography = biography;
+	this.biography = biography;
     }
 
     public String getDescription() {
-        return description;
+	return description;
     }
 
     public void setDescription(String description) {
-        this.description = description;
+	this.description = description;
     }
 
     public EsRole getRoleId() {
-        return roleId;
+	return roleId;
     }
 
     public void setRoleId(EsRole roleId) {
-        this.roleId = roleId;
+	this.roleId = roleId;
     }
 
     @Override
     public int hashCode() {
-        int hash = 0;
-        hash += (id != null ? id.hashCode() : 0);
-        return hash;
+	int hash = 0;
+	hash += (id != null ? id.hashCode() : 0);
+	return hash;
     }
 
     @Override
     public boolean equals(Object object) {
-        if (!(object instanceof EsUser)) {
-            return false;
-        }
-        EsUser other = (EsUser) object;
-        if ((this.id == null && other.id != null) || (this.id != null && !this.id.equals(other.id))) {
-            return false;
-        }
-        return true;
+	if (!(object instanceof EsUser)) {
+	    return false;
+	}
+	EsUser other = (EsUser) object;
+	if ((this.id == null && other.id != null)
+		|| (this.id != null && !this.id.equals(other.id))) {
+	    return false;
+	}
+	return true;
     }
 
     @Override
     public String toString() {
-        return "com.github.holodnov.javaee7webservices.model.EsUser[ id=" + id + " ]";
+	return "com.github.holodnov.javaee7webservices.model.EsUser[ id=" + id
+		+ " ]";
     }
 }

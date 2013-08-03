@@ -1,6 +1,6 @@
 create table es_role (
   id number(20) primary key,
-  name varchar2(100) constraint uq_role_name not null,
+  name varchar2(100) constraint uq_role_name unique not null,
   description varchar2(4000)
 );
 create table es_user (
