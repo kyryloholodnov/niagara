@@ -43,7 +43,7 @@ public class FrogJumpingTest {
     @Test
     public void testFindShortestWay3() {
 	assertThat(findShortestWay(new int[] { 1, 5, 4, 6, 5, 3, 0, 0, 0, 0 }),
-		is(Integer.MAX_VALUE));
+		is(3));
     }
 
     @Test
@@ -60,13 +60,19 @@ public class FrogJumpingTest {
 
     @Test
     public void testFindShortestWay6() {
-	assertThat(findShortestWay(new int[] { 2, 8, 3, 6, 9, 3, 0, 0, 1, 3 }),
+	assertThat(findShortestWay(new int[] { 2, 7, 3, 6, 9, 3, 0, 0, 1, 3 }),
 		is(3));
     }
 
     @Test
     public void testFindShortestWay7() {
-	assertThat(findShortestWay(new int[] { 2, 9, 3, 6, 9, 3, 0, 0, 1, 3 }),
+	assertThat(findShortestWay(new int[] { 2, 8, 3, 6, 9, 3, 0, 0, 1, 3 }),
+		is(2));
+    }
+    
+    @Test
+    public void testFindShortestWay8() {
+	assertThat(findShortestWay(new int[] { 2, 7, 7, 6, 9, 3, 0, 0, 1, 3 }),
 		is(2));
     }
 }

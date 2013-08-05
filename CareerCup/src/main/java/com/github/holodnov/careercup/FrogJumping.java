@@ -11,7 +11,7 @@ public class FrogJumping {
 	if ((array == null) || (array.length == 0)) {
 	    throw new IllegalArgumentException("Input array is null or empty");
 	}
-	int[] jumping = new int[array.length];
+	int[] jumping = new int[array.length - 1];
 	for (int i = jumping.length - 1; i >= 0; i--) {
 	    if (array[i] < 0) {
 		throw new IllegalArgumentException("Element #" + i
