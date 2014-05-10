@@ -38,7 +38,6 @@ public class ObjectSizeCalculator {
 		HEADER_SIZE = 8;
 	    }
 	} catch (Exception ex) {
-	    ex.printStackTrace();
 	    throw new AssertionError(ex);
 	}
     }
@@ -93,17 +92,16 @@ public class ObjectSizeCalculator {
 	    }
 	    size += INT_SIZE;
 	} else {
-	    List<Field> fieldsList = new ArrayList<Field>();
+	    List<Field> fields = new ArrayList<Field>();
 	    do {
-		Field[] fields = clazz.getDeclaredFields();
-		for (Field field : fields) {
+		Field[] classFields = clazz.getDeclaredFields();
+		for (Field field : classFields) {
 		    if (!Modifier.isStatic(field.getModifiers())) {
-			fieldsList.add(field);
+			fields.add(field);
 		    }
 		}
 		clazz = clazz.getSuperclass();
 	    } while (clazz != null);
-	    Field[] fields = fieldsList.toArray(new Field[0]);
 	    for (Field field : fields) {
 		if (!field.isAccessible()) {
 		    field.setAccessible(true);
