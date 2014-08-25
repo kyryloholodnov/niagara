@@ -46,11 +46,13 @@ public class UnionFindTest {
     public void testUnionFindGetSubsetsCount() {
         UnionFind unionFind = new UnionFind(5);
         assertEquals(5, unionFind.getSubsetsCount());
-        unionFind.union(1, 2);
+        int unionResult = unionFind.union(1, 2);
+        assertTrue(unionResult == 1 || unionResult == 2);
         assertEquals(4, unionFind.getSubsetsCount());
         assertTrue(unionFind.find(1) == 1 || unionFind.find(1) == 2);
         assertTrue(unionFind.find(2) == 1 || unionFind.find(2) == 2);
-        unionFind.union(1, 4);
+        unionResult = unionFind.union(1, 4);
+        assertTrue(unionResult == 1 || unionResult == 2 || unionResult == 4);
         assertEquals(3, unionFind.getSubsetsCount());
         assertTrue(unionFind.find(1) == 1 || unionFind.find(1) == 2 || unionFind.find(1) == 4);
         assertTrue(unionFind.find(2) == 1 || unionFind.find(2) == 2 || unionFind.find(2) == 4);
