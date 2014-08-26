@@ -7,6 +7,10 @@ import static java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Iterator;
 
 /**
+ * A <tt>DirectedGraph</tt> is an implementation for directed graphs.
+ *
+ * @see <a
+ * href="http://en.wikipedia.org/wiki/Graph_(mathematics)#Directed_graph">http://en.wikipedia.org/wiki/Graph_(mathematics)#Directed_graph</a>
  * @author Kyrylo Holodnov
  */
 public class DirectedGraph implements Graph {
