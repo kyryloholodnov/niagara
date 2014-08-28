@@ -9,7 +9,7 @@ import static com.github.holodnov.algorithms.levenshtein.BasicEditDistance.getEd
  */
 public class BasicEditDistanceTest {
 
-    private static final double EPSILON = 0.00001;
+    private static final double EPSILON = 0.0000001;
     private static final OperationsWeights hugeSubstitutionOperationsWeights
             = new OperationsWeights() {
                 @Override
