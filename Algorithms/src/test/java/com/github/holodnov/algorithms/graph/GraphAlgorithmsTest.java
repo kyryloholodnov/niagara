@@ -39,12 +39,14 @@ public class GraphAlgorithmsTest {
         graph.addEdge(3, 0, 4);
         int k = 2;
         ClusteringResult result = getClusteringComponents(graph, k);
-        assertEquals(3, result.getMaxSpacing(), EPSILON);
         // Expected clusters: {0, 1, 2}, {3}
         assertArrayEquals(new HashSet[]{
             new HashSet<>(Arrays.asList(0, 1, 2)),
             new HashSet<>(Arrays.asList(3))
         }, result.getClusters());
+        assertEquals(3, result.getMaxSpacing(), EPSILON);
+        assertEquals(2, result.getMaxSpacingFirstVertex());
+        assertEquals(3, result.getMaxSpacingSecondVertex());
     }
 
     @Test
@@ -56,12 +58,14 @@ public class GraphAlgorithmsTest {
         graph.addEdge(3, 0, 4);
         int k = 3;
         ClusteringResult result = getClusteringComponents(graph, k);
-        assertEquals(2, result.getMaxSpacing(), EPSILON);
         // Expected clusters: {0, 1}, {2}, {3}
         assertArrayEquals(new HashSet[]{
             new HashSet<>(Arrays.asList(0, 1)),
             new HashSet<>(Arrays.asList(2)),
             new HashSet<>(Arrays.asList(3))
         }, result.getClusters());
+        assertEquals(2, result.getMaxSpacing(), EPSILON);
+        assertEquals(1, result.getMaxSpacingFirstVertex());
+        assertEquals(2, result.getMaxSpacingSecondVertex());
     }
 }

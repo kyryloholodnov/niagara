@@ -72,11 +72,15 @@ public final class GraphAlgorithms {
                 (Edge o1, Edge o2) -> o1.weight > o2.weight ? 1 : o1.weight < o2.weight ? -1 : 0);
         UnionFind unionFind = new UnionFind(graph.getVertexCount());
         double maxSpacing = 0;
+        int maxSpacingFirstVertex = -1;
+        int maxSpacingSecondVertex = -1;
         for (Edge edge : edges) {
             int c1 = unionFind.find(edge.from);
             int c2 = unionFind.find(edge.to);
             if (c1 != c2 && unionFind.getSubsetsCount() == k) {
                 maxSpacing = edge.weight;
+                maxSpacingFirstVertex = Math.min(edge.from, edge.to);
+                maxSpacingSecondVertex = Math.max(edge.from, edge.to);
                 break;
             } else if (c1 != c2) {
                 unionFind.union(edge.from, edge.to);
@@ -97,7 +101,10 @@ public final class GraphAlgorithms {
         for (Entry<Integer, Set<Integer>> entry : cluster2vertices.entrySet()) {
             clusters[i++] = entry.getValue();
         }
-        return new ClusteringResult(clusters, maxSpacing);
+        return new ClusteringResult(clusters,
+                maxSpacing,
+                maxSpacingFirstVertex,
+                maxSpacingSecondVertex);
     }
 
     private static class Edge {

@@ -9,10 +9,14 @@ public class ClusteringResult {
 
     private final Set<Integer>[] clusters;
     private final double maxSpacing;
+    private final int maxSpacingFirstVertex;
+    private final int maxSpacingSecondVertex;
 
-    public ClusteringResult(Set<Integer>[] clusters, double maxSpacing) {
+    public ClusteringResult(Set<Integer>[] clusters, double maxSpacing, int maxSpacingFirstVertex, int maxSpacingSecondVertex) {
         this.clusters = clusters;
         this.maxSpacing = maxSpacing;
+        this.maxSpacingFirstVertex = maxSpacingFirstVertex;
+        this.maxSpacingSecondVertex = maxSpacingSecondVertex;
     }
 
     public Set<Integer>[] getClusters() {
@@ -21,5 +25,13 @@ public class ClusteringResult {
 
     public double getMaxSpacing() {
         return maxSpacing;
+    }
+
+    public int getMaxSpacingFirstVertex() {
+        return maxSpacingFirstVertex;
+    }
+
+    public int getMaxSpacingSecondVertex() {
+        return maxSpacingSecondVertex;
     }
 }
