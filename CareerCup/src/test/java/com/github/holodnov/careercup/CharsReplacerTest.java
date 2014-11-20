@@ -45,14 +45,14 @@ public class CharsReplacerTest {
     public void testGeneratePasswords1() {
 	Set<String> actual = generatePasswords("z", replacer);
 	Set<String> expected = new HashSet<String>(Arrays.asList("z"));
-	assertThat(expected, is(actual));
+	assertThat(actual, is(expected));
     }
 
     @Test
     public void testGeneratePasswords2() {
 	Set<String> actual = generatePasswords("e", replacer);
 	Set<String> expected = new HashSet<String>(Arrays.asList("e", "9", "0"));
-	assertThat(expected, is(actual));
+	assertThat(actual, is(expected));
     }
 
     @Test
@@ -60,7 +60,7 @@ public class CharsReplacerTest {
 	Set<String> actual = generatePasswords("xey", replacer);
 	Set<String> expected = new HashSet<String>(Arrays.asList("xey", "x9y",
 		"x0y"));
-	assertThat(expected, is(actual));
+	assertThat(actual, is(expected));
     }
 
     @Test
@@ -68,7 +68,7 @@ public class CharsReplacerTest {
 	Set<String> actual = generatePasswords("ab", replacer);
 	Set<String> expected = new HashSet<String>(Arrays.asList("ab", "1b",
 		"2b", "a3", "a4", "13", "14", "23", "24"));
-	assertThat(expected, is(actual));
+	assertThat(actual, is(expected));
     }
 
     @Test
@@ -76,6 +76,6 @@ public class CharsReplacerTest {
 	Set<String> actual = generatePasswords("azb", replacer);
 	Set<String> expected = new HashSet<String>(Arrays.asList("azb", "1zb",
 		"2zb", "az3", "az4", "1z3", "1z4", "2z3", "2z4"));
-	assertThat(expected, is(actual));
+	assertThat(actual, is(expected));
     }
 }
