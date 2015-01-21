@@ -1,8 +1,12 @@
 package com.github.holodnov.algorithms.requests;
 
+import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
+
+import static java.lang.Math.sqrt;
+import static java.lang.System.nanoTime;
+import static java.util.concurrent.TimeUnit.*;
 
 /**
  * @author Kyrylo Holodnov
@@ -27,33 +31,33 @@ public class FastRequestsCounter {
             throw new IllegalArgumentException("Input time unit should be not null");
         }
         this.maxSize = maxSize;
-        bucketSize = (int) Math.sqrt(maxSize);
-        keepAliveInterval = TimeUnit.NANOSECONDS.convert(period, unit);
-        expirations = new LinkedList<>();
+        bucketSize = (int) sqrt(maxSize);
+        keepAliveInterval = NANOSECONDS.convert(period, unit);
+        expirations = new ArrayDeque<>((maxSize - 2) / bucketSize + 3);
     }
 
     public static FastRequestsCounter getSecondRequestsCounter(int maxSize) {
-        return new FastRequestsCounter(1, TimeUnit.SECONDS, maxSize);
+        return new FastRequestsCounter(1, SECONDS, maxSize);
     }
 
     public static FastRequestsCounter getMinuteRequestsCounter(int maxSize) {
-        return new FastRequestsCounter(1, TimeUnit.MINUTES, maxSize);
+        return new FastRequestsCounter(1, MINUTES, maxSize);
     }
 
     public static FastRequestsCounter getHourlyRequestsCounter(int maxSize) {
-        return new FastRequestsCounter(1, TimeUnit.HOURS, maxSize);
+        return new FastRequestsCounter(1, HOURS, maxSize);
     }
 
     public static FastRequestsCounter getDailyRequestsCounter(int maxSize) {
-        return new FastRequestsCounter(1, TimeUnit.DAYS, maxSize);
+        return new FastRequestsCounter(1, DAYS, maxSize);
     }
 
     public static FastRequestsCounter getWeeklyRequestsCounter(int maxSize) {
-        return new FastRequestsCounter(7, TimeUnit.DAYS, maxSize);
+        return new FastRequestsCounter(7, DAYS, maxSize);
     }
 
     public synchronized void newRequest() {
-        if (currentSize == maxSize || currentSize % bucketSize == 0) {
+        if (currentSize % bucketSize == 1 || currentSize == maxSize) {
             shrinkExpirations();
             if (currentSize == maxSize) {
                 removeEldestExpiration();
@@ -73,7 +77,7 @@ public class FastRequestsCounter {
     }
 
     private void shrinkExpirations() {
-        long now = System.nanoTime();
+        long now = nanoTime();
         while (true) {
             Deque<Long> eldest = expirations.peekFirst();
             if (eldest == null || eldest.peekFirst() >= now) {
@@ -104,10 +108,10 @@ public class FastRequestsCounter {
     private void addNewExpiration() {
         Deque<Long> newest = expirations.peekLast();
         if (newest == null || newest.size() == bucketSize) {
-            newest = new LinkedList<>();
+            newest = new ArrayDeque<>(bucketSize);
             expirations.addLast(newest);
         }
-        newest.addLast(System.nanoTime() + keepAliveInterval);
+        newest.addLast(nanoTime() + keepAliveInterval);
         currentSize++;
     }
 }

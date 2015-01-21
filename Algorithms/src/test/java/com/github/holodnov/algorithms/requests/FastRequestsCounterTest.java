@@ -1,15 +1,18 @@
 package com.github.holodnov.algorithms.requests;
 
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+
+import static java.util.concurrent.Executors.newFixedThreadPool;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.core.Is.is;
-import org.junit.Test;
 import static org.junit.Assert.assertThat;
+import static com.github.holodnov.algorithms.requests.FastRequestsCounter.getSecondRequestsCounter;
 
 /**
  * @author Kyrylo Holodnov
@@ -39,11 +42,11 @@ public class FastRequestsCounterTest {
 
     @Test
     public void testManyRequests() {
-        FastRequestsCounter counter = FastRequestsCounter.getSecondRequestsCounter(maxSize);
+        FastRequestsCounter counter = getSecondRequestsCounter(maxSize);
         for (int i = 0; i < maxSize; i++) {
             counter.newRequest();
             assertThat("Many requests are not passed for max size = "
-                    + maxSize + " (for i = " + i + ")",
+                            + maxSize + " (for i = " + i + ')',
                     counter.getRequestsCount(),
                     is(i + 1));
         }
@@ -51,11 +54,11 @@ public class FastRequestsCounterTest {
 
     @Test
     public void testManyRequestsAfterSleeping() throws InterruptedException {
-        FastRequestsCounter counter = FastRequestsCounter.getSecondRequestsCounter(maxSize);
+        FastRequestsCounter counter = getSecondRequestsCounter(maxSize);
         for (int i = 0; i < maxSize; i++) {
             counter.newRequest();
             assertThat("Many requests are not passed for max size = "
-                    + maxSize + " (for i = " + i + ")",
+                            + maxSize + " (for i = " + i + ')',
                     counter.getRequestsCount(),
                     is(i + 1));
         }
@@ -67,11 +70,11 @@ public class FastRequestsCounterTest {
 
     @Test
     public void testTooManyRequests() {
-        FastRequestsCounter counter = FastRequestsCounter.getSecondRequestsCounter(maxSize);
+        FastRequestsCounter counter = getSecondRequestsCounter(maxSize);
         for (int i = 0; i < 3 * maxSize; i++) {
             counter.newRequest();
             assertThat("Too many requests are not passed for max size = "
-                    + maxSize + " (for i = " + i + ")",
+                            + maxSize + " (for i = " + i + ')',
                     counter.getRequestsCount(),
                     is(Math.min(i + 1, maxSize)));
         }
@@ -79,11 +82,11 @@ public class FastRequestsCounterTest {
 
     @Test
     public void testTooManyRequestsAfterSleeping() throws InterruptedException {
-        FastRequestsCounter counter = FastRequestsCounter.getSecondRequestsCounter(maxSize);
+        FastRequestsCounter counter = getSecondRequestsCounter(maxSize);
         for (int i = 0; i < 3 * maxSize; i++) {
             counter.newRequest();
             assertThat("Too many requests are not passed for max size = "
-                    + maxSize + " (for i = " + i + ")",
+                            + maxSize + " (for i = " + i + ')',
                     counter.getRequestsCount(),
                     is(Math.min(i + 1, maxSize)));
         }
@@ -95,16 +98,14 @@ public class FastRequestsCounterTest {
 
     @Test
     public void testPerformanceOfManyRequests() throws InterruptedException {
-        final ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, maxSize));
+        final ExecutorService executor = newFixedThreadPool(Math.min(10, maxSize));
         final long start = System.currentTimeMillis();
-        final FastRequestsCounter counter = FastRequestsCounter.getSecondRequestsCounter(maxSize);
+        final FastRequestsCounter counter = getSecondRequestsCounter(maxSize);
         for (int i = 0; i < maxSize; i++) {
-            executor.submit(() -> {
-                counter.newRequest();
-            });
+            executor.submit(counter::newRequest);
         }
         executor.shutdown();
-        executor.awaitTermination(2, TimeUnit.SECONDS);
+        executor.awaitTermination(2, SECONDS);
         System.out.println(maxSize + " requests (performance test) for " + maxSize + "-size counter: "
                 + (System.currentTimeMillis() - start + 0d) / 1000 + " seconds");
         assertThat("Many requests (performance test) are not passed for max size = " + maxSize,
@@ -114,18 +115,16 @@ public class FastRequestsCounterTest {
 
     @Test
     public void testPerformanceOfTooManyRequests() throws InterruptedException {
-        final ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, maxSize));
+        final ExecutorService executor = newFixedThreadPool(Math.min(10, maxSize));
         final long start = System.currentTimeMillis();
-        final FastRequestsCounter counter = FastRequestsCounter.getSecondRequestsCounter(maxSize);
+        final FastRequestsCounter counter = getSecondRequestsCounter(maxSize);
         for (int i = 0; i < 3 * maxSize; i++) {
-            executor.submit(() -> {
-                counter.newRequest();
-            });
+            executor.submit(counter::newRequest);
         }
         executor.shutdown();
-        executor.awaitTermination(2, TimeUnit.SECONDS);
+        executor.awaitTermination(2, SECONDS);
         System.out.println((3 * maxSize) + " requests (performance test) for " + maxSize + "-size counter: "
-                + (System.currentTimeMillis() - start + 0d) / 1000 + " seconds");
+                + (System.currentTimeMillis() - start + 0.0) / 1000 + " seconds");
         assertThat("Too many requests (performance test) are not passed for max size = " + maxSize,
                 counter.getRequestsCount(),
                 is(maxSize));
