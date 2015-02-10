@@ -1,14 +1,13 @@
 package com.github.holodnov.algorithms.graph;
 
 import java.util.Iterator;
-import java.util.Map.Entry;
 
 /**
  * A <tt>Graph</tt> is an interface for graph algorithms.
  *
+ * @author Kyrylo Holodnov
  * @see <a
  * href="http://en.wikipedia.org/wiki/Graph_(mathematics)">http://en.wikipedia.org/wiki/Graph_(mathematics)</a>
- * @author Kyrylo Holodnov
  */
 public interface Graph {
 
@@ -50,29 +49,16 @@ public interface Graph {
      * Retrieves edges for input vertex (this vertex is a tail of edges).
      *
      * @param vertex input vertex
-     * @return iterator of entries, each entry is "head-to-weight" pair
+     * @return iterator of entries
      * @throws IllegalArgumentException if vertex out of bounds
      */
-    Iterator<Entry<Integer, Double>> getEdgesForVertex(int vertex);
+    Iterator<Edge> getEdgesForVertex(int vertex);
 
     /**
      * Adds new edge to graph.
      *
-     * @param from from-vertex (edge tail)
-     * @param to to-vertex (edge head)
-     * @param weight edge weight
-     * @throws IllegalArgumentException if vertices out of bounds
+     * @param edge input edge
+     * @throws IllegalArgumentException if edge is null or indices are out-of-bound
      */
-    void addEdge(int from, int to, double weight);
-
-    /**
-     * Adds new edge with default weight (1.0) to graph.
-     *
-     * @param from from-vertex (edge tail)
-     * @param to to-vertex (edge head)
-     * @throws IllegalArgumentException if vertices out of bounds
-     */
-    default void addEdge(int from, int to) {
-        addEdge(from, to, 1.0);
-    }
+    void addEdge(Edge edge);
 }

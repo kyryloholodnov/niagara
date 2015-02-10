@@ -67,6 +67,9 @@ public class FastRequestsCounter {
     }
 
     public synchronized int getRequestsCount() {
+        if (currentSize == 0) {
+            return currentSize;
+        }
         shrinkExpirations();
         return currentSize;
     }

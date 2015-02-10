@@ -5,9 +5,9 @@ package com.github.holodnov.algorithms.unionfind;
  * amortized time complexity for <b>union</b> and <b>find</b> operations has
  * inverse Ackermann complexity.
  *
+ * @author Kyrylo Holodnov
  * @see <a
  * href="http://en.wikipedia.org/wiki/Disjoint-set_data_structure">http://en.wikipedia.org/wiki/Disjoint-set_data_structure</a>
- * @author Kyrylo Holodnov
  */
 public class UnionFind {
 

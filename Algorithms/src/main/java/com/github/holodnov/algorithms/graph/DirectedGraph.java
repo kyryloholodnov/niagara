@@ -1,24 +1,23 @@
 package com.github.holodnov.algorithms.graph;
 
+import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
-import static java.util.AbstractMap.Entry;
-import static java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * A <tt>DirectedGraph</tt> is an implementation for directed graphs.
  *
+ * @author Kyrylo Holodnov
  * @see <a
  * href="http://en.wikipedia.org/wiki/Graph_(mathematics)#Directed_graph">http://en.wikipedia.org/wiki/Graph_(mathematics)#Directed_graph</a>
- * @author Kyrylo Holodnov
  */
-public class DirectedGraph implements Graph {
+public class DirectedGraph implements Graph, Serializable {
 
-    private static final Double ONE = 1.0;
+    static final long serialVersionUID = 201502100253L;
 
     private double[] vertices;
-    private final List<Entry<Integer, Double>>[] edges;
+    private final List<Edge>[] edges;
     private final int vertexCount;
     protected int edgeCount;
 
@@ -59,9 +58,9 @@ public class DirectedGraph implements Graph {
     }
 
     @Override
-    public Iterator<Entry<Integer, Double>> getEdgesForVertex(int vertex) {
+    public Iterator<Edge> getEdgesForVertex(int vertex) {
         checkVertexRange(vertex);
-        List<Entry<Integer, Double>> edgesForVertex = edges[vertex];
+        List<Edge> edgesForVertex = edges[vertex];
         if (edgesForVertex == null) {
             return null;
         }
@@ -69,22 +68,15 @@ public class DirectedGraph implements Graph {
     }
 
     @Override
-    public void addEdge(int from, int to, double weight) {
-        checkEdgeRange(from, to);
-        if (edges[from] == null) {
-            edges[from] = new ArrayList<>(1);
+    public void addEdge(Edge edge) {
+        if (edge == null) {
+            throw new IllegalArgumentException("Input edge should be not null");
         }
-        edges[from].add(new SimpleImmutableEntry<>(to, weight));
-        edgeCount++;
-    }
-
-    @Override
-    public void addEdge(int from, int to) {
-        checkEdgeRange(from, to);
-        if (edges[from] == null) {
-            edges[from] = new ArrayList<>(1);
+        checkEdgeRange(edge.getTail(), edge.getHead());
+        if (edges[edge.getTail()] == null) {
+            edges[edge.getTail()] = new ArrayList<>(1);
         }
-        edges[from].add(new SimpleImmutableEntry<>(to, ONE));
+        edges[edge.getTail()].add(edge);
         edgeCount++;
     }
 
@@ -106,11 +98,11 @@ public class DirectedGraph implements Graph {
         }
     }
 
-    private static class EdgesForVertexIterator implements Iterator<Entry<Integer, Double>> {
+    private static class EdgesForVertexIterator implements Iterator<Edge> {
 
-        private final Iterator<Entry<Integer, Double>> iterator;
+        private final Iterator<Edge> iterator;
 
-        public EdgesForVertexIterator(List<Entry<Integer, Double>> edges) {
+        public EdgesForVertexIterator(List<Edge> edges) {
             this.iterator = edges.iterator();
         }
 
@@ -120,7 +112,7 @@ public class DirectedGraph implements Graph {
         }
 
         @Override
-        public Entry<Integer, Double> next() {
+        public Edge next() {
             return iterator.next();
         }
     }
