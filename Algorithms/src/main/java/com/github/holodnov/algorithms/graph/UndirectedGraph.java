@@ -1,6 +1,7 @@
 package com.github.holodnov.algorithms.graph;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * A <tt>UndirectedGraph</tt> is an implementation for undirected graphs.
@@ -11,7 +12,11 @@ import java.io.Serializable;
  */
 public class UndirectedGraph extends DirectedGraph implements Serializable {
 
-    static final long serialVersionUID = 201502100252L;
+    private static final long serialVersionUID = 201503092110L;
+
+    protected UndirectedGraph() {
+        super();
+    }
 
     public UndirectedGraph(int vertexCount) {
         super(vertexCount);
@@ -22,5 +27,15 @@ public class UndirectedGraph extends DirectedGraph implements Serializable {
         super.addEdge(edge);
         super.addEdge(edge.reverse());
         edgeCount--;
+    }
+
+    @Override
+    public String toString() {
+        return "UndirectedGraph{" +
+                "vertices=" + Arrays.toString(vertices) +
+                ", edges=" + Arrays.toString(edges) +
+                ", vertexCount=" + vertexCount +
+                ", edgeCount=" + edgeCount +
+                '}';
     }
 }

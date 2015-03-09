@@ -13,6 +13,10 @@ public class Edge implements Serializable {
     private final int head;
     private final double weight;
 
+    private Edge() {
+        this(0, 0, 0);
+    }
+
     public Edge(int tail, int head, double weight) {
         this.tail = tail;
         this.head = head;

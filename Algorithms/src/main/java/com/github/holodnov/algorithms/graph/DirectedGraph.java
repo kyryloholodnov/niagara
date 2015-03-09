@@ -2,6 +2,7 @@ package com.github.holodnov.algorithms.graph;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -14,12 +15,16 @@ import java.util.List;
  */
 public class DirectedGraph implements Graph, Serializable {
 
-    static final long serialVersionUID = 201502100253L;
+    private static final long serialVersionUID = 201503092109L;
 
-    private double[] vertices;
-    private final List<Edge>[] edges;
-    private final int vertexCount;
+    protected double[] vertices;
+    protected final List<Edge>[] edges;
+    protected final int vertexCount;
     protected int edgeCount;
+
+    protected DirectedGraph() {
+        this(10);
+    }
 
     public DirectedGraph(int vertexCount) {
         if (vertexCount <= 0) {
@@ -78,6 +83,16 @@ public class DirectedGraph implements Graph, Serializable {
         }
         edges[edge.getTail()].add(edge);
         edgeCount++;
+    }
+
+    @Override
+    public String toString() {
+        return "DirectedGraph{" +
+                "vertices=" + Arrays.toString(vertices) +
+                ", edges=" + Arrays.toString(edges) +
+                ", vertexCount=" + vertexCount +
+                ", edgeCount=" + edgeCount +
+                '}';
     }
 
     private void checkVertexRange(int vertex) {
