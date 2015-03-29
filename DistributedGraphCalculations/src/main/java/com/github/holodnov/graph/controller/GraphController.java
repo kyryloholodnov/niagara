@@ -1,12 +1,16 @@
 package com.github.holodnov.graph.controller;
 
 import com.github.holodnov.algorithms.graph.DirectedGraph;
-import com.github.holodnov.algorithms.graph.UndirectedGraph;
+import com.github.holodnov.graph.exception.UnparseableGraphDataException;
+import com.github.holodnov.graph.http.Response;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import static com.github.holodnov.graph.http.RequestUtils.appendEdges;
+import static com.github.holodnov.graph.http.RequestUtils.getGraphWithVertices;
 
 /**
  * @author Kyrylo Holodnov
@@ -14,12 +18,13 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 public class GraphController {
 
-    @RequestMapping(value = "/max_weight_dag",
-            method = RequestMethod.POST,
-            headers = "content-type=application/json,application/xml")
+    @RequestMapping(value = "/max_weight",
+            method = RequestMethod.GET)
     @ResponseBody
-    public DirectedGraph getMaxWeightDAG(@RequestBody UndirectedGraph graph) {
-        // TODO this is stub: put code here
-        return graph;
+    public Response getMaxWeight(@RequestParam String vertices,
+                                 @RequestParam(required = false) String edges) throws UnparseableGraphDataException {
+        DirectedGraph graph = (DirectedGraph) getGraphWithVertices(vertices, true);
+        appendEdges(graph, edges);
+        return new Response().setGraph(graph);
     }
 }
