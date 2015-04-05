@@ -4,6 +4,7 @@ import com.github.holodnov.algorithms.graph.DirectedGraph;
 import com.github.holodnov.graph.exception.UnparseableGraphDataException;
 import com.github.holodnov.graph.http.Response;
 import com.github.holodnov.graph.service.GraphService;
+import com.github.holodnov.graph.zoo.ZooException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,6 +52,22 @@ public class GraphController {
         return new Response().
                 setGraph(graph).
                 setMaxWeight(maxWeight).
+                setElapsed(System.currentTimeMillis() - start);
+    }
+
+    @RequestMapping(value = "/dag_forest_max_weight_distributed",
+            method = RequestMethod.GET)
+    @ResponseBody
+    public Response sendDAGForestMaxWeighDistributed(@RequestParam String vertices,
+                                                     @RequestParam(required = false) String edges)
+            throws UnparseableGraphDataException, InterruptedException, ZooException {
+        long start = System.currentTimeMillis();
+        DirectedGraph graph = (DirectedGraph) getGraphWithVertices(vertices, true);
+        appendEdges(graph, edges);
+        String graphId = graphService.sendDAGForestMaxWeightDistributed(graph);
+        return new Response().
+                setGraphId(graphId).
+                setGraph(graph).
                 setElapsed(System.currentTimeMillis() - start);
     }
 }

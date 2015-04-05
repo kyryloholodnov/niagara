@@ -7,12 +7,22 @@ import com.github.holodnov.algorithms.graph.Graph;
  */
 public class Response {
 
+    private String graphId;
     private Graph graph;
     private Double maxWeight;
     private Long elapsed;
     private String error;
 
     public Response() {
+    }
+
+    public String getGraphId() {
+        return graphId;
+    }
+
+    public Response setGraphId(String graphId) {
+        this.graphId = graphId;
+        return this;
     }
 
     public Graph getGraph() {

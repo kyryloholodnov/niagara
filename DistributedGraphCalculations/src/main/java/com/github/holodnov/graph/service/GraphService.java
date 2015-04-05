@@ -2,8 +2,13 @@ package com.github.holodnov.graph.service;
 
 import com.github.holodnov.algorithms.graph.DirectedGraph;
 import com.github.holodnov.algorithms.graph.Edge;
+import com.github.holodnov.graph.generator.UINT64Generator;
+import com.github.holodnov.graph.zoo.ZooClient;
+import com.github.holodnov.graph.zoo.ZooException;
+import org.springframework.beans.factory.DisposableBean;
 
-import javax.annotation.PreDestroy;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -11,25 +16,75 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import static com.github.holodnov.graph.service.Status.INCOMPLETED;
+import static com.github.holodnov.graph.zoo.ZooClient.validateAndTransformPath;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.System.getProperty;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
 /**
  * @author Kyrylo Holodnov
  */
-public class GraphService {
+public class GraphService implements DisposableBean {
 
+    private static final long RANGE_COUNT = 1L << 10;
+    private static final long MIN_RANGE_STEP = 1L << 20;
+
+    private ZooClient zooClient;
+    private UINT64Generator uint64Generator;
+    private final String graphPath;
     private final int nThreads;
     private final ExecutorService executor;
 
     public GraphService() {
-        this(3 * Runtime.getRuntime().availableProcessors());
+        this(getProperty("zookeeper.graph.root.path", "/graphs"),
+                3 * Runtime.getRuntime().availableProcessors());
     }
 
-    public GraphService(int nThreads) {
+    public GraphService(String graphPath, int nThreads) {
+        this.graphPath = validateAndTransformPath(graphPath);
         this.nThreads = nThreads;
         executor = newFixedThreadPool(nThreads);
+    }
+
+    public void setZooClient(ZooClient zooClient) {
+        this.zooClient = zooClient;
+    }
+
+    public void setUint64Generator(UINT64Generator uint64Generator) {
+        this.uint64Generator = uint64Generator;
+    }
+
+    public String sendDAGForestMaxWeightDistributed(DirectedGraph graph) throws ZooException, InterruptedException {
+        long start = System.currentTimeMillis();
+        String graphId = uint64Generator.generate();
+        String completedPath = graphPath + "/dag_forest_max_weight/completed/" + graphId;
+        String graphDataPath = completedPath + "/graph_data";
+        String startTimePath = completedPath + "/start_time";
+        String lockPath = completedPath + "/lock";
+        if (!zooClient.blockUntilConnectedOrTimedOut()) {
+            throw new ZooException("Cannot connect to ZooKeeper (connection timed out)");
+        }
+        zooClient.createPath(graphDataPath, toByteArrayMaxWeightForestDAGGraph(graph));
+        zooClient.createPath(startTimePath, start);
+        zooClient.createPath(lockPath);
+        String calculationsPath = graphPath + "/dag_forest_max_weight/calculations/" + graphId;
+        long fullRange = 1L << graph.getVertexCount();
+        long step = max(fullRange / RANGE_COUNT, MIN_RANGE_STEP);
+        for (int i = 0; ; i++) {
+            if (i * step > fullRange) {
+                break;
+            }
+            String rangePath = calculationsPath + "/range_" + (i + 1);
+            zooClient.createPath(rangePath + "/left", i * step);
+            zooClient.createPath(rangePath + "/right", min((i + 1) * step, fullRange));
+            zooClient.createPath(rangePath + "/offset", 0);
+            zooClient.createPath(rangePath + "/max_weight", 0.0);
+            zooClient.createPath(rangePath + "/status", INCOMPLETED.ordinal());
+            zooClient.createPath(rangePath + "/lock");
+        }
+        return graphId;
     }
 
     public double getDAGForestMaxWeightMultiThreaded(DirectedGraph graph) throws InterruptedException {
@@ -40,7 +95,7 @@ public class GraphService {
         return getDAGForestMaxWeightSingleThreaded(graph, 0, 1L << graph.getVertexCount());
     }
 
-    @PreDestroy
+    @Override
     public void destroy() {
         executor.shutdownNow();
     }
@@ -126,5 +181,47 @@ public class GraphService {
         }
         marked[from] = 2;
         return false;
+    }
+
+    private byte[] toByteArrayMaxWeightForestDAGGraph(DirectedGraph graph) {
+        int size = 4 + 8 * graph.getVertexCount() + 4 + 8 * graph.getEdgeCount();
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[size]);
+        buffer.putInt(graph.getVertexCount());
+        for (int i = 0; i < graph.getVertexCount(); i++) {
+            buffer.putDouble(graph.getVertexWeight(i));
+        }
+        buffer.putInt(graph.getEdgeCount());
+        for (int i = 0; i < graph.getEdgeCount(); i++) {
+            Iterator<Edge> edges = graph.getEdgesForVertex(i);
+            if (edges == null) {
+                continue;
+            }
+            while (edges.hasNext()) {
+                Edge edge = edges.next();
+                buffer.putInt(edge.getTail());
+                buffer.putInt(edge.getHead());
+            }
+        }
+        return buffer.array();
+    }
+
+    private DirectedGraph fromByteArrayMaxWeightForestDAGGraph(byte[] array) throws IOException {
+        try {
+            ByteBuffer buffer = ByteBuffer.wrap(array);
+            int vertexCount = buffer.getInt();
+            DirectedGraph graph = new DirectedGraph(vertexCount);
+            for (int i = 0; i < vertexCount; i++) {
+                graph.setVertexWeight(i, buffer.getDouble());
+            }
+            int edgeCount = buffer.getInt();
+            for (int i = 0; i < edgeCount; i++) {
+                int tail = buffer.getInt();
+                int head = buffer.getInt();
+                graph.addEdge(new Edge(tail, head));
+            }
+            return graph;
+        } catch (Exception ex) {
+            throw new IOException("Bad data in array", ex);
+        }
     }
 }
