@@ -215,6 +215,38 @@ public class ZooClient implements DisposableBean {
      * @return long value stored in ZNode
      */
     public long getLongFromPath(String zNodePath) throws ZooException, NoZooNodeException {
+        byte[] bytes = getBytesFromPath(zNodePath);
+        if (bytes == null || bytes.length != 8) {
+            return 0;
+        } else {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            return buffer.getLong();
+        }
+    }
+
+    /**
+     * Retrieves double value for given ZNode path.
+     *
+     * @param zNodePath input ZNode path
+     * @return double value stored in ZNode
+     */
+    public double getDoubleFromPath(String zNodePath) throws ZooException, NoZooNodeException {
+        byte[] bytes = getBytesFromPath(zNodePath);
+        if (bytes == null || bytes.length != 8) {
+            return 0.0;
+        } else {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            return buffer.getDouble();
+        }
+    }
+
+    /**
+     * Retrieves byte array for given ZNode path.
+     *
+     * @param zNodePath input ZNode path
+     * @return byte array stored in ZNode
+     */
+    public byte[] getBytesFromPath(String zNodePath) throws ZooException, NoZooNodeException {
         zNodePath = validatePath(zNodePath);
         validateConnection();
         try {
@@ -224,11 +256,50 @@ public class ZooClient implements DisposableBean {
             } catch (KeeperException.NoNodeException ex) {
                 throw new NoZooNodeException("No ZNode exists, for path = " + zNodePath);
             }
-            if (bytes == null || bytes.length != 8) {
-                return 0;
-            } else {
-                ByteBuffer buffer = ByteBuffer.wrap(bytes);
-                return buffer.getLong();
+            return bytes;
+        } catch (Exception ex) {
+            throw new ZooException("Cannot retrieve long value from ZNode, for path = " + zNodePath, ex);
+        }
+    }
+
+    /**
+     * Puts long value for given ZNode path.
+     *
+     * @param zNodePath input ZNode path
+     * @param value     input value to put
+     */
+    public void putLongToPath(String zNodePath, long value) throws ZooException, NoZooNodeException {
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.putLong(value);
+        putBytesToPath(zNodePath, buffer.array());
+    }
+
+    /**
+     * Puts double value for given ZNode path.
+     *
+     * @param zNodePath input ZNode path
+     * @param value     input value to put
+     */
+    public void putDoubleToPath(String zNodePath, double value) throws ZooException, NoZooNodeException {
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.putDouble(value);
+        putBytesToPath(zNodePath, buffer.array());
+    }
+
+    /**
+     * Puts byte array for given ZNode path.
+     *
+     * @param zNodePath input ZNode path
+     * @param bytes     input byte array to put
+     */
+    public void putBytesToPath(String zNodePath, byte[] bytes) throws ZooException, NoZooNodeException {
+        zNodePath = validatePath(zNodePath);
+        validateConnection();
+        try {
+            try {
+                zooClient.setData().forPath(zNodePath, bytes);
+            } catch (KeeperException.NoNodeException ex) {
+                throw new NoZooNodeException("No ZNode exists, for path = " + zNodePath);
             }
         } catch (Exception ex) {
             throw new ZooException("Cannot retrieve long value from ZNode, for path = " + zNodePath, ex);

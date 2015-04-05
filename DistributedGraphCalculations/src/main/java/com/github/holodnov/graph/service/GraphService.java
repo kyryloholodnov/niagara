@@ -8,6 +8,7 @@ import com.github.holodnov.graph.zoo.ZooClient;
 import com.github.holodnov.graph.zoo.ZooException;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreMutex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -25,11 +26,15 @@ import java.util.concurrent.Future;
 
 import static com.github.holodnov.graph.service.Status.COMPLETED;
 import static com.github.holodnov.graph.service.Status.UNCOMPLETED;
+import static com.github.holodnov.graph.zoo.ZooClient.acquireLock;
+import static com.github.holodnov.graph.zoo.ZooClient.releaseLock;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static javax.xml.bind.DatatypeConverter.printHexBinary;
 import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type.CHILD_ADDED;
 import static org.apache.curator.utils.PathUtils.validatePath;
 
@@ -281,25 +286,66 @@ public class GraphService implements InitializingBean, DisposableBean {
                     }
                     log.info("Ranges found for graph id = {}: {}", graphId, ranges);
                     int completed = 0;
+                    DirectedGraph graph = null;
                     for (String range : ranges) {
                         String statusPath = calculationsPath + "/" + graphId + "/" + range + "/status";
-                        int status;
-                        try {
-                            status = (int) zooClient.getLongFromPath(statusPath);
-                            if (status == COMPLETED.ordinal()) {
-                                completed++;
-                                continue;
-                            }
-                        } catch (NoZooNodeException ex) {
+                        if (isStatusCompleted(statusPath)) {
                             completed++;
                             continue;
                         }
-                        // Status is UNCOMPLETED:
-                        // TODO: proceed here
+                        String lockPath = calculationsPath + "/" + graphId + "/" + range + "/lock";
+                        InterProcessSemaphoreMutex lock = zooClient.getLock(lockPath);
+                        if (acquireLock(lock, 100, MILLISECONDS)) {
+                            try {
+                                if (isStatusCompleted(statusPath)) {
+                                    completed++;
+                                    continue;
+                                }
+                                if (graph == null) {
+                                    String graphDataPath = graphPath + "/dag_forest_max_weight/completed/" + graphId + "/graph_data";
+                                    byte[] graphBytes = zooClient.getBytesFromPath(graphDataPath);
+                                    try {
+                                        graph = fromByteArrayMaxWeightForestDAGGraph(graphBytes);
+                                    } catch (IOException ex) {
+                                        throw new ZooException(
+                                                "Corrupted data for graph with id = " + graphId + ", bytes = " + printHexBinary(graphBytes),
+                                                ex);
+                                    }
+                                }
+                                long left = zooClient.getLongFromPath(calculationsPath + "/" + graphId + "/left");
+                                long right = zooClient.getLongFromPath(calculationsPath + "/" + graphId + "/right");
+                                long offset = zooClient.getLongFromPath(calculationsPath + "/" + graphId + "/offset");
+                                double currentWeight = zooClient.getDoubleFromPath(calculationsPath + "/" + graphId + "/max_weight");
+                                while (left + offset < right) {
+                                    double weight = getDAGForestMaxWeightMultiThreaded(graph,
+                                            left + offset,
+                                            min(left + offset + OFFSET_READING, right));
+                                    if (weight > currentWeight) {
+                                        currentWeight = weight;
+                                        zooClient.putDoubleToPath(calculationsPath + "/" + graphId + "/max_weight", currentWeight);
+                                    }
+                                    offset += OFFSET_READING;
+                                    zooClient.putLongToPath(calculationsPath + "/" + graphId + "/offset", offset);
+                                }
+                                completed++;
+                                log.info("Processed range = {}, for graph id = {}, max weight = {}", range, graphId, currentWeight);
+                            } catch (NoZooNodeException ignored) {
+                            } finally {
+                                releaseLock(lock);
+                            }
+                        }
                     }
                 }
             } catch (InterruptedException | ZooException ex) {
                 log.warn("Exception occurred while processing uncompleted graphs: ", ex);
+            }
+        }
+
+        private boolean isStatusCompleted(String statusPath) throws ZooException {
+            try {
+                return zooClient.getLongFromPath(statusPath) == COMPLETED.ordinal();
+            } catch (NoZooNodeException ex) {
+                return true;
             }
         }
     }
