@@ -2,13 +2,17 @@ package com.github.holodnov.graph.service;
 
 import com.github.holodnov.algorithms.graph.DirectedGraph;
 import com.github.holodnov.algorithms.graph.Edge;
+import com.github.holodnov.algorithms.requests.FastRequestsCounter;
 import com.github.holodnov.graph.generator.UINT64Generator;
 import com.github.holodnov.graph.zoo.NoZooNodeException;
 import com.github.holodnov.graph.zoo.ZooClient;
 import com.github.holodnov.graph.zoo.ZooException;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreMutex;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -34,6 +38,7 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.xml.bind.DatatypeConverter.printHexBinary;
 import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type.CHILD_ADDED;
 import static org.apache.curator.utils.PathUtils.validatePath;
@@ -41,7 +46,7 @@ import static org.apache.curator.utils.PathUtils.validatePath;
 /**
  * @author Kyrylo Holodnov
  */
-public class GraphService implements InitializingBean, DisposableBean {
+public class GraphService implements InitializingBean, DisposableBean, ConnectionStateListener {
 
     private static final Logger log = LoggerFactory.getLogger(GraphService.class);
     private static final long RANGE_COUNT = 1L << 10;
@@ -54,6 +59,7 @@ public class GraphService implements InitializingBean, DisposableBean {
     private final int nThreads;
     private final ExecutorService graphProcessingExecutor;
     private final ExecutorService nodeProcessingExecutor;
+    private final FastRequestsCounter connectionFailedCounter;
 
     public GraphService() {
         this(getProperty("zookeeper.graph.root.path", "/graphs"),
@@ -65,6 +71,7 @@ public class GraphService implements InitializingBean, DisposableBean {
         this.nThreads = nThreads;
         graphProcessingExecutor = newFixedThreadPool(nThreads);
         nodeProcessingExecutor = newSingleThreadExecutor();
+        connectionFailedCounter = new FastRequestsCounter(5, SECONDS, 10000);
     }
 
     public void setZooClient(ZooClient zooClient) throws Exception {
@@ -263,6 +270,14 @@ public class GraphService implements InitializingBean, DisposableBean {
         nodeProcessingExecutor.shutdownNow();
     }
 
+    @Override
+    public void stateChanged(CuratorFramework client, ConnectionState newState) {
+        log.info("Connection state changed: {}", newState);
+        if (!newState.isConnected()) {
+            connectionFailedCounter.newRequest();
+        }
+    }
+
     private class NodesProcessor implements Runnable {
 
         @Override
@@ -284,11 +299,12 @@ public class GraphService implements InitializingBean, DisposableBean {
                     if (ranges == null || ranges.isEmpty()) {
                         continue;
                     }
-                    log.info("Ranges found for graph id = {}: {}", graphId, ranges);
+                    log.info("Ranges found for graph id = {}: {}", graphId, ranges.size());
                     int completed = 0;
                     DirectedGraph graph = null;
                     for (String range : ranges) {
-                        String statusPath = calculationsPath + "/" + graphId + "/" + range + "/status";
+                        String rangePath = calculationsPath + "/" + graphId + "/" + range;
+                        String statusPath = rangePath + "/status";
                         if (isStatusCompleted(statusPath)) {
                             completed++;
                             continue;
@@ -312,23 +328,54 @@ public class GraphService implements InitializingBean, DisposableBean {
                                                 ex);
                                     }
                                 }
-                                long left = zooClient.getLongFromPath(calculationsPath + "/" + graphId + "/left");
-                                long right = zooClient.getLongFromPath(calculationsPath + "/" + graphId + "/right");
-                                long offset = zooClient.getLongFromPath(calculationsPath + "/" + graphId + "/offset");
-                                double currentWeight = zooClient.getDoubleFromPath(calculationsPath + "/" + graphId + "/max_weight");
+                                long left = zooClient.getLongFromPath(rangePath + "/left");
+                                long right = zooClient.getLongFromPath(rangePath + "/right");
+                                long offset = zooClient.getLongFromPath(rangePath + "/offset");
+                                double currentWeight = zooClient.getDoubleFromPath(rangePath + "/max_weight");
                                 while (left + offset < right) {
                                     double weight = getDAGForestMaxWeightMultiThreaded(graph,
                                             left + offset,
                                             min(left + offset + OFFSET_READING, right));
                                     if (weight > currentWeight) {
                                         currentWeight = weight;
-                                        zooClient.putDoubleToPath(calculationsPath + "/" + graphId + "/max_weight", currentWeight);
+                                        zooClient.putDoubleToPath(rangePath + "/max_weight", currentWeight);
                                     }
                                     offset += OFFSET_READING;
-                                    zooClient.putLongToPath(calculationsPath + "/" + graphId + "/offset", offset);
+                                    zooClient.putLongToPath(rangePath + "/offset", offset);
+                                    if (connectionFailedCounter.getRequestsCount() > 0) {
+                                        throw new InterruptedException("Connection failed during calculations, lock is dirty");
+                                    }
                                 }
+                                zooClient.putLongToPath(rangePath + "/status", COMPLETED.ordinal());
                                 completed++;
                                 log.info("Processed range = {}, for graph id = {}, max weight = {}", range, graphId, currentWeight);
+                            } catch (NoZooNodeException ignored) {
+                            } finally {
+                                releaseLock(lock);
+                            }
+                        }
+                    }
+                    if (completed == ranges.size()) {
+                        String completedPath = graphPath + "/dag_forest_max_weight/completed/" + graphId;
+                        String lockPath = completedPath + "/lock";
+                        InterProcessSemaphoreMutex lock = zooClient.getLock(lockPath);
+                        if (acquireLock(lock, 100, MILLISECONDS)) {
+                            try {
+                                ranges = zooClient.getChildZNodes(calculationsPath + "/" + graphId);
+                                if (ranges == null || ranges.isEmpty()) {
+                                    continue;
+                                }
+                                log.info("Ranges found for graph id = {}: {}", graphId, ranges.size());
+                                double maxWeight = 0;
+                                for (String range : ranges) {
+                                    String rangePath = calculationsPath + "/" + graphId + "/" + range;
+                                    String maxWeightPath = rangePath + "/max_weight";
+                                    double weight = zooClient.getDoubleFromPath(maxWeightPath);
+                                    if (weight > maxWeight) {
+                                        maxWeight = weight;
+                                    }
+                                }
+                                // TODO proceed:
                             } catch (NoZooNodeException ignored) {
                             } finally {
                                 releaseLock(lock);

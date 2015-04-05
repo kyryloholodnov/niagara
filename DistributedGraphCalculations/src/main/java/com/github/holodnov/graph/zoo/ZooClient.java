@@ -250,13 +250,9 @@ public class ZooClient implements DisposableBean {
         zNodePath = validatePath(zNodePath);
         validateConnection();
         try {
-            byte[] bytes;
-            try {
-                bytes = zooClient.getData().forPath(zNodePath);
-            } catch (KeeperException.NoNodeException ex) {
-                throw new NoZooNodeException("No ZNode exists, for path = " + zNodePath);
-            }
-            return bytes;
+            return zooClient.getData().forPath(zNodePath);
+        } catch (KeeperException.NoNodeException ex) {
+            throw new NoZooNodeException("No ZNode exists, for path = " + zNodePath);
         } catch (Exception ex) {
             throw new ZooException("Cannot retrieve long value from ZNode, for path = " + zNodePath, ex);
         }
