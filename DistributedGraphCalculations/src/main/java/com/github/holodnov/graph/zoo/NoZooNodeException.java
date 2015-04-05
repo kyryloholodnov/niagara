@@ -3,23 +3,23 @@ package com.github.holodnov.graph.zoo;
 /**
  * @author Kyrylo Holodnov
  */
-public class ZooException extends Exception {
+public class NoZooNodeException extends Exception {
 
     private static final long serialVersionUID = 7818375828146090123L;
 
-    public ZooException() {
+    public NoZooNodeException() {
         super();
     }
 
-    public ZooException(String message) {
+    public NoZooNodeException(String message) {
         super(message);
     }
 
-    public ZooException(String message, Throwable cause) {
+    public NoZooNodeException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public ZooException(Throwable cause) {
+    public NoZooNodeException(Throwable cause) {
         super(cause);
     }
 }

@@ -10,7 +10,7 @@ public class Response {
     private String graphId;
     private Graph graph;
     private Double maxWeight;
-    private Long elapsed;
+    private Long workTime;
     private String error;
 
     public Response() {
@@ -43,12 +43,12 @@ public class Response {
         return this;
     }
 
-    public Long getElapsed() {
-        return elapsed;
+    public Long getWorkTime() {
+        return workTime;
     }
 
-    public Response setElapsed(Long elapsed) {
-        this.elapsed = elapsed;
+    public Response setWorkTime(Long workTime) {
+        this.workTime = workTime;
         return this;
     }
 

@@ -36,7 +36,7 @@ public class GraphController {
         return new Response().
                 setGraph(graph).
                 setMaxWeight(maxWeight).
-                setElapsed(System.currentTimeMillis() - start);
+                setWorkTime(System.currentTimeMillis() - start);
     }
 
     @RequestMapping(value = "/dag_forest_max_weight_multi_threads",
@@ -52,7 +52,7 @@ public class GraphController {
         return new Response().
                 setGraph(graph).
                 setMaxWeight(maxWeight).
-                setElapsed(System.currentTimeMillis() - start);
+                setWorkTime(System.currentTimeMillis() - start);
     }
 
     @RequestMapping(value = "/dag_forest_max_weight_distributed",
@@ -68,6 +68,6 @@ public class GraphController {
         return new Response().
                 setGraphId(graphId).
                 setGraph(graph).
-                setElapsed(System.currentTimeMillis() - start);
+                setWorkTime(System.currentTimeMillis() - start);
     }
 }

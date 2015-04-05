@@ -5,5 +5,5 @@ package com.github.holodnov.graph.service;
  */
 public enum Status {
 
-    INCOMPLETED, COMPLETED;
+    UNCOMPLETED, COMPLETED;
 }

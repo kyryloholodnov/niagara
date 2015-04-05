@@ -3,39 +3,52 @@ package com.github.holodnov.graph.service;
 import com.github.holodnov.algorithms.graph.DirectedGraph;
 import com.github.holodnov.algorithms.graph.Edge;
 import com.github.holodnov.graph.generator.UINT64Generator;
+import com.github.holodnov.graph.zoo.NoZooNodeException;
 import com.github.holodnov.graph.zoo.ZooClient;
 import com.github.holodnov.graph.zoo.ZooException;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import static com.github.holodnov.graph.service.Status.INCOMPLETED;
-import static com.github.holodnov.graph.zoo.ZooClient.validateAndTransformPath;
+import static com.github.holodnov.graph.service.Status.COMPLETED;
+import static com.github.holodnov.graph.service.Status.UNCOMPLETED;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.Executors.newFixedThreadPool;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type.CHILD_ADDED;
+import static org.apache.curator.utils.PathUtils.validatePath;
 
 /**
  * @author Kyrylo Holodnov
  */
-public class GraphService implements DisposableBean {
+public class GraphService implements InitializingBean, DisposableBean {
 
+    private static final Logger log = LoggerFactory.getLogger(GraphService.class);
     private static final long RANGE_COUNT = 1L << 10;
-    private static final long MIN_RANGE_STEP = 1L << 20;
+    private static final long OFFSET_READING = 1L << 22;
+    private static final long MIN_RANGE_STEP = OFFSET_READING;
 
     private ZooClient zooClient;
     private UINT64Generator uint64Generator;
     private final String graphPath;
     private final int nThreads;
-    private final ExecutorService executor;
+    private final ExecutorService graphProcessingExecutor;
+    private final ExecutorService nodeProcessingExecutor;
 
     public GraphService() {
         this(getProperty("zookeeper.graph.root.path", "/graphs"),
@@ -43,12 +56,13 @@ public class GraphService implements DisposableBean {
     }
 
     public GraphService(String graphPath, int nThreads) {
-        this.graphPath = validateAndTransformPath(graphPath);
+        this.graphPath = validatePath(graphPath);
         this.nThreads = nThreads;
-        executor = newFixedThreadPool(nThreads);
+        graphProcessingExecutor = newFixedThreadPool(nThreads);
+        nodeProcessingExecutor = newSingleThreadExecutor();
     }
 
-    public void setZooClient(ZooClient zooClient) {
+    public void setZooClient(ZooClient zooClient) throws Exception {
         this.zooClient = zooClient;
     }
 
@@ -81,9 +95,11 @@ public class GraphService implements DisposableBean {
             zooClient.createPath(rangePath + "/right", min((i + 1) * step, fullRange));
             zooClient.createPath(rangePath + "/offset", 0);
             zooClient.createPath(rangePath + "/max_weight", 0.0);
-            zooClient.createPath(rangePath + "/status", INCOMPLETED.ordinal());
+            zooClient.createPath(rangePath + "/status", UNCOMPLETED.ordinal());
             zooClient.createPath(rangePath + "/lock");
         }
+        String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted";
+        zooClient.createPath(uncompletedPath + "/" + graphId);
         return graphId;
     }
 
@@ -95,18 +111,13 @@ public class GraphService implements DisposableBean {
         return getDAGForestMaxWeightSingleThreaded(graph, 0, 1L << graph.getVertexCount());
     }
 
-    @Override
-    public void destroy() {
-        executor.shutdownNow();
-    }
-
     private double getDAGForestMaxWeightMultiThreaded(DirectedGraph graph, long lb, long rb) throws InterruptedException {
         final long rangePerThread = max((rb - lb) / nThreads, 1);
         List<Future<Double>> futures = new ArrayList<>();
         long threadOffset = lb;
         while (threadOffset < rb) {
             final long threadOffsetConst = threadOffset;
-            futures.add(executor.submit(() -> getDAGForestMaxWeightSingleThreaded(graph, threadOffsetConst, min(rb, threadOffsetConst + rangePerThread))));
+            futures.add(graphProcessingExecutor.submit(() -> getDAGForestMaxWeightSingleThreaded(graph, threadOffsetConst, min(rb, threadOffsetConst + rangePerThread))));
             threadOffset += rangePerThread;
         }
         double maxWeight = 0;
@@ -222,6 +233,74 @@ public class GraphService implements DisposableBean {
             return graph;
         } catch (Exception ex) {
             throw new IOException("Bad data in array", ex);
+        }
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted";
+        zooClient.createOrUpdatePath(uncompletedPath);
+        PathChildrenCache cache = new PathChildrenCache(zooClient.getZooClient(), uncompletedPath, true);
+        cache.start();
+        PathChildrenCacheListener listener = (client, event) -> {
+            if (event.getType() == CHILD_ADDED) {
+                log.debug("Child-added event received: {}", event);
+                nodeProcessingExecutor.submit(new NodesProcessor());
+            }
+        };
+        cache.getListenable().addListener(listener);
+    }
+
+    @Override
+    public void destroy() {
+        log.debug("Destroying GraphService bean...");
+        graphProcessingExecutor.shutdownNow();
+        nodeProcessingExecutor.shutdownNow();
+    }
+
+    private class NodesProcessor implements Runnable {
+
+        @Override
+        public void run() {
+            try {
+                if (!zooClient.blockUntilConnectedOrTimedOut()) {
+                    return;
+                }
+                String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted";
+                List<String> graphIds = zooClient.getChildZNodes(uncompletedPath);
+                if (graphIds == null || graphIds.isEmpty()) {
+                    return;
+                }
+                Collections.shuffle(graphIds);
+                log.info("Uncompleted graphs ids: {}", graphIds);
+                String calculationsPath = graphPath + "/dag_forest_max_weight/calculations";
+                for (String graphId : graphIds) {
+                    List<String> ranges = zooClient.getChildZNodes(calculationsPath + "/" + graphId);
+                    if (ranges == null || ranges.isEmpty()) {
+                        continue;
+                    }
+                    log.info("Ranges found for graph id = {}: {}", graphId, ranges);
+                    int completed = 0;
+                    for (String range : ranges) {
+                        String statusPath = calculationsPath + "/" + graphId + "/" + range + "/status";
+                        int status;
+                        try {
+                            status = (int) zooClient.getLongFromPath(statusPath);
+                            if (status == COMPLETED.ordinal()) {
+                                completed++;
+                                continue;
+                            }
+                        } catch (NoZooNodeException ex) {
+                            completed++;
+                            continue;
+                        }
+                        // Status is UNCOMPLETED:
+                        // TODO: proceed here
+                    }
+                }
+            } catch (InterruptedException | ZooException ex) {
+                log.warn("Exception occurred while processing uncompleted graphs: ", ex);
+            }
         }
     }
 }

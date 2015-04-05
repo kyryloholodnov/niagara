@@ -19,6 +19,7 @@ import static java.lang.System.getProperty;
 import static java.util.Objects.requireNonNull;
 import static org.apache.curator.framework.CuratorFrameworkFactory.newClient;
 import static org.apache.curator.framework.imps.CuratorFrameworkState.STARTED;
+import static org.apache.curator.utils.PathUtils.validatePath;
 
 /**
  * @author Kyrylo Holodnov
@@ -129,7 +130,7 @@ public class ZooClient implements DisposableBean {
     }
 
     /**
-     * Creates ZNode for given path and sets value to ZNode if needed.
+     * Creates or updates ZNode for given path and sets value to ZNode if needed.
      *
      * @param zNodePath input ZNode path
      * @param value     value that should be set
@@ -137,7 +138,7 @@ public class ZooClient implements DisposableBean {
      */
     public boolean createOrUpdatePath(String zNodePath,
                                       byte[] value) throws ZooException {
-        zNodePath = validateAndTransformPath(zNodePath);
+        zNodePath = validatePath(zNodePath);
         validateConnection();
         Stat stat;
         try {
@@ -170,8 +171,14 @@ public class ZooClient implements DisposableBean {
         }
     }
 
+    /**
+     * Creates ZNode for given path and sets value to ZNode if needed.
+     *
+     * @param zNodePath input ZNode path
+     * @param value     value that should be set
+     */
     public void createPath(String zNodePath, byte[] value) throws ZooException {
-        zNodePath = validateAndTransformPath(zNodePath);
+        zNodePath = validatePath(zNodePath);
         validateConnection();
         try {
             if (value != null) {
@@ -191,7 +198,7 @@ public class ZooClient implements DisposableBean {
      * @param zNodePath input ZNode path
      */
     public void deletePathWithChildren(String zNodePath) throws ZooException {
-        zNodePath = validateAndTransformPath(zNodePath);
+        zNodePath = validatePath(zNodePath);
         validateConnection();
         try {
             zooClient.delete().deletingChildrenIfNeeded().forPath(zNodePath);
@@ -207,11 +214,16 @@ public class ZooClient implements DisposableBean {
      * @param zNodePath input ZNode path
      * @return long value stored in ZNode
      */
-    public long getLongFromPath(String zNodePath) throws ZooException {
-        zNodePath = validateAndTransformPath(zNodePath);
+    public long getLongFromPath(String zNodePath) throws ZooException, NoZooNodeException {
+        zNodePath = validatePath(zNodePath);
         validateConnection();
         try {
-            byte[] bytes = zooClient.getData().forPath(zNodePath);
+            byte[] bytes;
+            try {
+                bytes = zooClient.getData().forPath(zNodePath);
+            } catch (KeeperException.NoNodeException ex) {
+                throw new NoZooNodeException("No ZNode exists, for path = " + zNodePath);
+            }
             if (bytes == null || bytes.length != 8) {
                 return 0;
             } else {
@@ -230,7 +242,7 @@ public class ZooClient implements DisposableBean {
      * @return lock object
      */
     public InterProcessSemaphoreMutex getLock(String lockPath) throws ZooException {
-        lockPath = validateAndTransformPath(lockPath);
+        lockPath = validatePath(lockPath);
         return new InterProcessSemaphoreMutex(zooClient, lockPath);
     }
 
@@ -241,12 +253,31 @@ public class ZooClient implements DisposableBean {
      * @return child ZNodes
      */
     public List<String> getChildZNodes(String zNodePath) throws ZooException {
-        zNodePath = validateAndTransformPath(zNodePath);
+        zNodePath = validatePath(zNodePath);
         validateConnection();
         try {
             return zooClient.getChildren().forPath(zNodePath);
+        } catch (KeeperException.NoNodeException ignored) {
+            return null;
         } catch (Exception ex) {
             throw new ZooException("Cannot retrieve child ZNodes, for path = " + zNodePath, ex);
+        }
+    }
+
+    /**
+     * Checks if ZNode exists.
+     *
+     * @param zNodePath input ZNode path
+     * @return true if ZNode exists, false otherwise
+     */
+    public boolean exists(String zNodePath) throws ZooException {
+        zNodePath = validatePath(zNodePath);
+        validateConnection();
+        try {
+            Stat stat = zooClient.checkExists().forPath(zNodePath);
+            return stat != null;
+        } catch (Exception ex) {
+            throw new ZooException("Cannot check if ZNode exists, for path = " + zNodePath, ex);
         }
     }
 
@@ -294,31 +325,6 @@ public class ZooClient implements DisposableBean {
         } catch (Exception ex) {
             throw new ZooException("Exception occurred while acquiring lock", ex);
         }
-    }
-
-    public static String validateAndTransformPath(String path) {
-        if (path == null) {
-            throw new IllegalArgumentException("Input path should be not null");
-        }
-        if (path.isEmpty()) {
-            throw new IllegalArgumentException("Input path should be not empty");
-        }
-        if (!path.startsWith("/")) {
-            throw new IllegalArgumentException("Input path should start with '/'");
-        }
-        if (path.contains(" ")) {
-            throw new IllegalArgumentException("Input path should not contain spaces");
-        }
-        while (path.endsWith("/")) {
-            path = path.substring(0, path.length() - 1);
-        }
-        if (path.isEmpty()) {
-            throw new IllegalArgumentException("Input path should be not root path");
-        }
-        if (path.contains("//")) {
-            throw new IllegalArgumentException("Input path should not contain \"//\"");
-        }
-        return path;
     }
 
     private void validateConnection() throws ZooException {
