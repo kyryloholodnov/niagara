@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -50,6 +51,18 @@ public class ZooClient implements DisposableBean {
     @Override
     public void destroy() {
         zooClient.close();
+    }
+
+    public void sync(String zNodePath) throws ZooException, NoZooNodeException {
+        zNodePath = validatePath(zNodePath);
+        validateConnection();
+        try {
+            zooClient.sync().forPath(zNodePath);
+        } catch (KeeperException.NoNodeException ex) {
+            throw new NoZooNodeException("No ZNode exists, for path = " + zNodePath);
+        } catch (Exception ex) {
+            throw new ZooException("Exception occurred while syncing ZNode, for path = " + zNodePath, ex);
+        }
     }
 
     /**
@@ -317,13 +330,22 @@ public class ZooClient implements DisposableBean {
      * Retrieves child ZNodes for given path.
      *
      * @param zNodePath input ZNode path
+     * @param fullPath  to return full path or not
      * @return child ZNodes
      */
-    public List<String> getChildZNodes(String zNodePath) throws ZooException {
+    public List<String> getChildZNodes(String zNodePath, boolean fullPath) throws ZooException {
         zNodePath = validatePath(zNodePath);
         validateConnection();
         try {
-            return zooClient.getChildren().forPath(zNodePath);
+            List<String> children = zooClient.getChildren().forPath(zNodePath);
+            if (!fullPath || children == null || children.isEmpty()) {
+                return children;
+            }
+            List<String> fullPathChildren = new ArrayList<>(children.size());
+            for (String child : children) {
+                fullPathChildren.add(zNodePath + "/" + child);
+            }
+            return fullPathChildren;
         } catch (KeeperException.NoNodeException ignored) {
             return null;
         } catch (Exception ex) {

@@ -76,6 +76,7 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
 
     public void setZooClient(ZooClient zooClient) throws Exception {
         this.zooClient = zooClient;
+        zooClient.getZooClient().getConnectionStateListenable().addListener(this);
     }
 
     public void setUint64Generator(UINT64Generator uint64Generator) {
@@ -110,8 +111,15 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
             zooClient.createPath(rangePath + "/status", UNCOMPLETED.ordinal());
             zooClient.createPath(rangePath + "/lock");
         }
-        String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted";
-        zooClient.createPath(uncompletedPath + "/" + graphId);
+        String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted/" + graphId;
+        zooClient.createPath(uncompletedPath);
+        try {
+            zooClient.sync(calculationsPath);
+            zooClient.sync(completedPath);
+            zooClient.sync(uncompletedPath);
+        } catch (NoZooNodeException ex) {
+            throw new ZooException(ex);
+        }
         return graphId;
     }
 
@@ -287,7 +295,7 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                     return;
                 }
                 String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted";
-                List<String> graphIds = zooClient.getChildZNodes(uncompletedPath);
+                List<String> graphIds = zooClient.getChildZNodes(uncompletedPath, false);
                 if (graphIds == null || graphIds.isEmpty()) {
                     return;
                 }
@@ -295,7 +303,7 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                 log.info("Uncompleted graphs ids: {}", graphIds);
                 String calculationsPath = graphPath + "/dag_forest_max_weight/calculations";
                 for (String graphId : graphIds) {
-                    List<String> ranges = zooClient.getChildZNodes(calculationsPath + "/" + graphId);
+                    List<String> ranges = zooClient.getChildZNodes(calculationsPath + "/" + graphId, true);
                     if (ranges == null || ranges.isEmpty()) {
                         continue;
                     }
@@ -303,13 +311,12 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                     int completed = 0;
                     DirectedGraph graph = null;
                     for (String range : ranges) {
-                        String rangePath = calculationsPath + "/" + graphId + "/" + range;
-                        String statusPath = rangePath + "/status";
+                        String statusPath = range + "/status";
                         if (isStatusCompleted(statusPath)) {
                             completed++;
                             continue;
                         }
-                        String lockPath = calculationsPath + "/" + graphId + "/" + range + "/lock";
+                        String lockPath = range + "/lock";
                         InterProcessSemaphoreMutex lock = zooClient.getLock(lockPath);
                         if (acquireLock(lock, 100, MILLISECONDS)) {
                             try {
@@ -318,35 +325,27 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                                     continue;
                                 }
                                 if (graph == null) {
-                                    String graphDataPath = graphPath + "/dag_forest_max_weight/completed/" + graphId + "/graph_data";
-                                    byte[] graphBytes = zooClient.getBytesFromPath(graphDataPath);
-                                    try {
-                                        graph = fromByteArrayMaxWeightForestDAGGraph(graphBytes);
-                                    } catch (IOException ex) {
-                                        throw new ZooException(
-                                                "Corrupted data for graph with id = " + graphId + ", bytes = " + printHexBinary(graphBytes),
-                                                ex);
-                                    }
+                                    graph = readDirectedGraph(graphId);
                                 }
-                                long left = zooClient.getLongFromPath(rangePath + "/left");
-                                long right = zooClient.getLongFromPath(rangePath + "/right");
-                                long offset = zooClient.getLongFromPath(rangePath + "/offset");
-                                double currentWeight = zooClient.getDoubleFromPath(rangePath + "/max_weight");
+                                long left = zooClient.getLongFromPath(range + "/left");
+                                long right = zooClient.getLongFromPath(range + "/right");
+                                long offset = zooClient.getLongFromPath(range + "/offset");
+                                double currentWeight = zooClient.getDoubleFromPath(range + "/max_weight");
                                 while (left + offset < right) {
                                     double weight = getDAGForestMaxWeightMultiThreaded(graph,
                                             left + offset,
                                             min(left + offset + OFFSET_READING, right));
                                     if (weight > currentWeight) {
                                         currentWeight = weight;
-                                        zooClient.putDoubleToPath(rangePath + "/max_weight", currentWeight);
+                                        zooClient.putDoubleToPath(range + "/max_weight", currentWeight);
                                     }
                                     offset += OFFSET_READING;
-                                    zooClient.putLongToPath(rangePath + "/offset", offset);
+                                    zooClient.putLongToPath(range + "/offset", offset);
                                     if (connectionFailedCounter.getRequestsCount() > 0) {
                                         throw new InterruptedException("Connection failed during calculations, lock is dirty");
                                     }
                                 }
-                                zooClient.putLongToPath(rangePath + "/status", COMPLETED.ordinal());
+                                zooClient.putLongToPath(range + "/status", COMPLETED.ordinal());
                                 completed++;
                                 log.info("Processed range = {}, for graph id = {}, max weight = {}", range, graphId, currentWeight);
                             } catch (NoZooNodeException ignored) {
@@ -356,35 +355,13 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                         }
                     }
                     if (completed == ranges.size()) {
-                        String completedPath = graphPath + "/dag_forest_max_weight/completed/" + graphId;
-                        String lockPath = completedPath + "/lock";
-                        InterProcessSemaphoreMutex lock = zooClient.getLock(lockPath);
-                        if (acquireLock(lock, 100, MILLISECONDS)) {
-                            try {
-                                ranges = zooClient.getChildZNodes(calculationsPath + "/" + graphId);
-                                if (ranges == null || ranges.isEmpty()) {
-                                    continue;
-                                }
-                                log.info("Ranges found for graph id = {}: {}", graphId, ranges.size());
-                                double maxWeight = 0;
-                                for (String range : ranges) {
-                                    String rangePath = calculationsPath + "/" + graphId + "/" + range;
-                                    String maxWeightPath = rangePath + "/max_weight";
-                                    double weight = zooClient.getDoubleFromPath(maxWeightPath);
-                                    if (weight > maxWeight) {
-                                        maxWeight = weight;
-                                    }
-                                }
-                                // TODO proceed:
-                            } catch (NoZooNodeException ignored) {
-                            } finally {
-                                releaseLock(lock);
-                            }
-                        }
+                        workWithCompletedWeightsFromRanges(graphId);
                     }
                 }
             } catch (InterruptedException | ZooException ex) {
                 log.warn("Exception occurred while processing uncompleted graphs: ", ex);
+            } catch (Exception ex) {
+                log.error("Unrecoginized exception occurred while processing uncompleted graphs: ", ex);
             }
         }
 
@@ -393,6 +370,58 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                 return zooClient.getLongFromPath(statusPath) == COMPLETED.ordinal();
             } catch (NoZooNodeException ex) {
                 return true;
+            }
+        }
+
+        private DirectedGraph readDirectedGraph(String graphId) throws ZooException, NoZooNodeException {
+            byte[] graphBytes = zooClient.getBytesFromPath(graphPath + "/dag_forest_max_weight/completed/" + graphId + "/graph_data");
+            try {
+                return fromByteArrayMaxWeightForestDAGGraph(graphBytes);
+            } catch (IOException ex) {
+                throw new ZooException(
+                        "Corrupted data for graph with id = " + graphId + ", bytes = " + printHexBinary(graphBytes),
+                        ex);
+            }
+        }
+
+        private void removeRanges(List<String> ranges) {
+            for (String range : ranges) {
+                try {
+                    zooClient.deletePathWithChildren(range);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        private void workWithCompletedWeightsFromRanges(String graphId) throws ZooException {
+            String completedPath = graphPath + "/dag_forest_max_weight/completed/" + graphId;
+            String lockPath = completedPath + "/lock";
+            InterProcessSemaphoreMutex lock = zooClient.getLock(lockPath);
+            if (acquireLock(lock, 200, MILLISECONDS)) {
+                try {
+                    List<String> ranges = zooClient.getChildZNodes(
+                            graphPath + "/dag_forest_max_weight/calculations/" + graphId, true);
+                    if (ranges == null || ranges.isEmpty()) {
+                        return;
+                    }
+                    log.info("Ranges found for graph id = {}: {}", graphId, ranges.size());
+                    double maxWeight = 0;
+                    for (String range : ranges) {
+                        String maxWeightPath = range + "/max_weight";
+                        double weight = zooClient.getDoubleFromPath(maxWeightPath);
+                        if (weight > maxWeight) {
+                            maxWeight = weight;
+                        }
+                    }
+                    zooClient.createPath(completedPath + "/max_weight", maxWeight);
+                    long startTime = zooClient.getLongFromPath(completedPath + "/start_time");
+                    zooClient.createPath(completedPath + "/end_time", System.currentTimeMillis() - startTime);
+                    log.info("Stored max weight = {} for graph id = {}", maxWeight, graphId);
+                    removeRanges(ranges);
+                } catch (NoZooNodeException ignored) {
+                } finally {
+                    releaseLock(lock);
+                }
             }
         }
     }
