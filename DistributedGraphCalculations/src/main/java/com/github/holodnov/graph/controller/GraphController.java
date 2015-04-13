@@ -12,8 +12,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.io.IOException;
+
 import static com.github.holodnov.graph.http.RequestUtils.appendEdges;
 import static com.github.holodnov.graph.http.RequestUtils.getGraphWithVertices;
+import static com.github.holodnov.graph.service.Status.COMPLETED;
+import static com.github.holodnov.graph.service.Status.UNCOMPLETED;
 
 /**
  * @author Kyrylo Holodnov
@@ -25,7 +29,7 @@ public class GraphController {
     private GraphService graphService;
 
     @RequestMapping(value = "/dag_forest_max_weight_single_thread",
-            method = RequestMethod.GET)
+            method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
     public Response getDAGForestMaxWeightSingleThread(@RequestParam String vertices,
                                                       @RequestParam(required = false) String edges) throws UnparseableGraphDataException {
@@ -35,12 +39,13 @@ public class GraphController {
         double maxWeight = graphService.getDAGForestMaxWeightSingleThreaded(graph);
         return new Response().
                 setGraph(graph).
+                setStatus(COMPLETED).
                 setMaxWeight(maxWeight).
                 setWorkTime(System.currentTimeMillis() - start);
     }
 
     @RequestMapping(value = "/dag_forest_max_weight_multi_threads",
-            method = RequestMethod.GET)
+            method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
     public Response getDAGForestMaxWeightMultiThread(@RequestParam String vertices,
                                                      @RequestParam(required = false) String edges)
@@ -51,12 +56,13 @@ public class GraphController {
         double maxWeight = graphService.getDAGForestMaxWeightMultiThreaded(graph);
         return new Response().
                 setGraph(graph).
+                setStatus(COMPLETED).
                 setMaxWeight(maxWeight).
                 setWorkTime(System.currentTimeMillis() - start);
     }
 
     @RequestMapping(value = "/dag_forest_max_weight_distributed",
-            method = RequestMethod.GET)
+            method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
     public Response sendDAGForestMaxWeighDistributed(@RequestParam String vertices,
                                                      @RequestParam(required = false) String edges)
@@ -68,6 +74,15 @@ public class GraphController {
         return new Response().
                 setGraphId(graphId).
                 setGraph(graph).
+                setStatus(UNCOMPLETED).
                 setWorkTime(System.currentTimeMillis() - start);
+    }
+
+    @RequestMapping(value = "/dag_forest_max_weight_distributed_result",
+            method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public Response getDAGForestMaxWeighDistributedResult(@RequestParam String graphId)
+            throws ZooException, IOException {
+        return graphService.getDAGForestMaxWeighDistributedResult(graphId);
     }
 }

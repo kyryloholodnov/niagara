@@ -45,6 +45,7 @@ public class RequestUtils {
             return graph;
         }
         while (!edges.isEmpty()) {
+            edges = edges.trim();
             if (!edges.startsWith("(")) {
                 throw new UnparseableGraphDataException("Edge data should be at '(' bracket");
             }

@@ -1,6 +1,7 @@
 package com.github.holodnov.graph.http;
 
 import com.github.holodnov.algorithms.graph.Graph;
+import com.github.holodnov.graph.service.Status;
 
 /**
  * @author Kyrylo Holodnov
@@ -9,6 +10,7 @@ public class Response {
 
     private String graphId;
     private Graph graph;
+    private Status status;
     private Double maxWeight;
     private Long workTime;
     private String error;
@@ -31,6 +33,15 @@ public class Response {
 
     public Response setGraph(Graph graph) {
         this.graph = graph;
+        return this;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public Response setStatus(Status status) {
+        this.status = status;
         return this;
     }
 
