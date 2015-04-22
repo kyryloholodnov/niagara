@@ -9,6 +9,8 @@ import com.github.holodnov.graph.zoo.NoZooNodeException;
 import com.github.holodnov.graph.zoo.ZooClient;
 import com.github.holodnov.graph.zoo.ZooException;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.transaction.CuratorTransaction;
+import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreMutex;
@@ -84,18 +86,20 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
         this.uint64Generator = uint64Generator;
     }
 
-    public String sendDAGForestMaxWeightDistributed(DirectedGraph graph) throws ZooException, InterruptedException {
+    public String sendDAGForestMaxWeightDistributed(DirectedGraph graph) throws Exception {
         long start = System.currentTimeMillis();
         String graphId = uint64Generator.generate();
         String completedPath = graphPath + "/dag_forest_max_weight/completed/" + graphId;
-        String lockPath = completedPath + "/lock";
         if (!zooClient.blockUntilConnectedOrTimedOut()) {
             throw new ZooException("Cannot connect to ZooKeeper (connection timed out)");
         }
-        zooClient.createPath(completedPath + "/graph_data", toByteArrayMaxWeightDAGForestGraph(graph));
-        zooClient.createPath(completedPath + "/start_time", start);
-        zooClient.createPath(lockPath);
+        CuratorTransaction curatorTransaction = zooClient.getZooClient().inTransaction();
+        curatorTransaction = curatorTransaction.create().forPath(completedPath).and();
+        curatorTransaction = curatorTransaction.create().forPath(completedPath + "/graph_data", toByteArrayMaxWeightDAGForestGraph(graph)).and();
+        curatorTransaction = curatorTransaction.create().forPath(completedPath + "/start_time", toByteArray(start)).and();
+        curatorTransaction = curatorTransaction.create().forPath(completedPath + "/lock").and();
         String calculationsPath = graphPath + "/dag_forest_max_weight/calculations/" + graphId;
+        curatorTransaction = curatorTransaction.create().forPath(calculationsPath).and();
         long fullRange = 1L << graph.getVertexCount();
         long step = max(fullRange / RANGE_COUNT, MIN_RANGE_STEP);
         for (int i = 0; ; i++) {
@@ -103,22 +107,17 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                 break;
             }
             String rangePath = calculationsPath + "/range_" + (i + 1);
-            zooClient.createPath(rangePath + "/left", i * step);
-            zooClient.createPath(rangePath + "/right", min((i + 1) * step, fullRange));
-            zooClient.createPath(rangePath + "/offset", 0);
-            zooClient.createPath(rangePath + "/max_weight", 0.0);
-            zooClient.createPath(rangePath + "/status", UNCOMPLETED.ordinal());
-            zooClient.createPath(rangePath + "/lock");
+            curatorTransaction = curatorTransaction.create().forPath(rangePath).and();
+            curatorTransaction = curatorTransaction.create().forPath(rangePath + "/left", toByteArray(i * step)).and();
+            curatorTransaction = curatorTransaction.create().forPath(rangePath + "/right", toByteArray(min((i + 1) * step, fullRange))).and();
+            curatorTransaction = curatorTransaction.create().forPath(rangePath + "/offset", toByteArray(0)).and();
+            curatorTransaction = curatorTransaction.create().forPath(rangePath + "/max_weight", toByteArray(0.0)).and();
+            curatorTransaction = curatorTransaction.create().forPath(rangePath + "/status", toByteArray(UNCOMPLETED.ordinal())).and();
+            curatorTransaction = curatorTransaction.create().forPath(rangePath + "/lock").and();
         }
         String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted/" + graphId;
-        zooClient.createPath(uncompletedPath);
-        try {
-            zooClient.sync(calculationsPath);
-            zooClient.sync(completedPath);
-            zooClient.sync(uncompletedPath);
-        } catch (NoZooNodeException ex) {
-            throw new ZooException(ex);
-        }
+        curatorTransaction = curatorTransaction.create().forPath(uncompletedPath).and();
+        ((CuratorTransactionFinal) curatorTransaction).commit();
         if (log.isInfoEnabled()) {
             log.info("Time spent on ZNodes creation for graph id = {}: {} millis", graphId, System.currentTimeMillis() - start);
         }
@@ -337,6 +336,18 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
         if (!newState.isConnected()) {
             connectionFailedCounter.newRequest();
         }
+    }
+
+    private static byte[] toByteArray(long value) {
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.putLong(value);
+        return buffer.array();
+    }
+
+    private static byte[] toByteArray(double value) {
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.putDouble(value);
+        return buffer.array();
     }
 
     private class NodesProcessor implements Runnable {

@@ -66,7 +66,7 @@ public class GraphController {
     @ResponseBody
     public Response sendDAGForestMaxWeighDistributed(@RequestParam String vertices,
                                                      @RequestParam(required = false) String edges)
-            throws UnparseableGraphDataException, InterruptedException, ZooException {
+            throws Exception {
         long start = System.currentTimeMillis();
         DirectedGraph graph = (DirectedGraph) getGraphWithVertices(vertices, true);
         appendEdges(graph, edges);
