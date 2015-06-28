@@ -1,6 +1,9 @@
 package com.github.holodnov.careercup;
 
+import java.math.BigInteger;
 import java.util.TreeSet;
+
+import static java.math.BigInteger.ONE;
 
 /**
  * @author Kyrylo Holodnov
@@ -9,19 +12,23 @@ import java.util.TreeSet;
  */
 public class SequenceOfDivisibleNumbers {
 
-    public static long getNthNumber(int n) {
+    private static BigInteger TWO = BigInteger.valueOf(2);
+    private static BigInteger THREE = BigInteger.valueOf(3);
+    private static BigInteger FIVE = BigInteger.valueOf(5);
+
+    public static BigInteger getNthNumber(int n) {
         if (n <= 0) {
             throw new IllegalArgumentException("Input parameter should be positive");
         }
-        TreeSet<Long> set = new TreeSet<>();
-        set.add(1L);
-        long nthNumber = 1;
+        TreeSet<BigInteger> set = new TreeSet<>();
+        set.add(ONE);
+        BigInteger nthNumber = ONE;
         while (n > 0) {
             nthNumber = set.ceiling(nthNumber);
             set.remove(nthNumber);
-            set.add(2 * nthNumber);
-            set.add(3 * nthNumber);
-            set.add(5 * nthNumber);
+            set.add(nthNumber.multiply(TWO));
+            set.add(nthNumber.multiply(THREE));
+            set.add(nthNumber.multiply(FIVE));
             n--;
         }
         return nthNumber;
