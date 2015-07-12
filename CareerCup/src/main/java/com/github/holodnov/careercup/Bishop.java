@@ -15,10 +15,10 @@ public class Bishop {
 
     public static int findShortestWay(String start, String end) {
         if (start == null || !BOARD_CELL_PATTERN.matcher(start).matches()) {
-            throw new IllegalArgumentException("Start position should be 2-char string, not " + start);
+            throw new IllegalArgumentException("Start position should be 2-char string [a-h][1-8], not " + start);
         }
         if (end == null || !BOARD_CELL_PATTERN.matcher(end).matches()) {
-            throw new IllegalArgumentException("End position should be 2-char string, not " + end);
+            throw new IllegalArgumentException("End position should be 2-char string [a-h][1-8], not " + end);
         }
         int sh = start.charAt(0) - 'a';
         int sg = start.charAt(1) - '1';
