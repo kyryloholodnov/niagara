@@ -2,7 +2,6 @@ package com.github.holodnov.graph.service;
 
 import com.github.holodnov.algorithms.graph.DirectedGraph;
 import com.github.holodnov.algorithms.graph.Edge;
-import com.github.holodnov.algorithms.requests.FastRequestsCounter;
 import com.github.holodnov.graph.generator.UINT64Generator;
 import com.github.holodnov.graph.http.Response;
 import com.github.holodnov.graph.zoo.NoZooNodeException;
@@ -20,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,11 +38,11 @@ import static com.github.holodnov.graph.zoo.ZooClient.acquireLock;
 import static com.github.holodnov.graph.zoo.ZooClient.releaseLock;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.Runtime.getRuntime;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.xml.bind.DatatypeConverter.printHexBinary;
 import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type.CHILD_ADDED;
 import static org.apache.curator.utils.PathUtils.validatePath;
@@ -49,6 +50,7 @@ import static org.apache.curator.utils.PathUtils.validatePath;
 /**
  * @author Kyrylo Holodnov
  */
+@Service
 public class GraphService implements InitializingBean, DisposableBean, ConnectionStateListener {
 
     private static final Logger log = LoggerFactory.getLogger(GraphService.class);
@@ -56,34 +58,33 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
     private static final long OFFSET_READING = 1L << 27;
     private static final long MIN_RANGE_STEP = OFFSET_READING;
 
-    private ZooClient zooClient;
-    private UINT64Generator uint64Generator;
+    private final ZooClient zooClient;
+    private final UINT64Generator uint64Generator;
     private final String graphPath;
     private final int nThreads;
     private final ExecutorService graphProcessingExecutor;
     private final ExecutorService nodeProcessingExecutor;
-    private final FastRequestsCounter connectionFailedCounter;
+    private volatile long lastConnectionFailure;
 
-    public GraphService() {
-        this(getProperty("zookeeper.graph.root.path", "/graphs"),
-                3 * Runtime.getRuntime().availableProcessors());
+    public GraphService() throws Exception {
+        this(null, null);
     }
 
-    public GraphService(String graphPath, int nThreads) {
+    @Autowired
+    public GraphService(ZooClient zooClient, UINT64Generator uint64Generator) throws Exception {
+        this(zooClient, uint64Generator, getProperty("zookeeper.graph.root.path", "/graphs"), 3 * getRuntime().availableProcessors());
+    }
+
+    public GraphService(ZooClient zooClient, UINT64Generator uint64Generator, String graphPath, int nThreads) throws Exception {
+        this.zooClient = zooClient;
+        this.uint64Generator = uint64Generator;
         this.graphPath = validatePath(graphPath);
+        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/completed");
+        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/calculations");
+        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/uncompleted");
         this.nThreads = nThreads;
         graphProcessingExecutor = newFixedThreadPool(nThreads);
         nodeProcessingExecutor = newSingleThreadExecutor();
-        connectionFailedCounter = new FastRequestsCounter(5, SECONDS, 10000);
-    }
-
-    public void setZooClient(ZooClient zooClient) throws Exception {
-        this.zooClient = zooClient;
-        zooClient.getZooClient().getConnectionStateListenable().addListener(this);
-    }
-
-    public void setUint64Generator(UINT64Generator uint64Generator) {
-        this.uint64Generator = uint64Generator;
     }
 
     public String sendDAGForestMaxWeightDistributed(DirectedGraph graph) throws Exception {
@@ -334,7 +335,7 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
     public void stateChanged(CuratorFramework client, ConnectionState newState) {
         log.info("Connection state changed: {}", newState);
         if (!newState.isConnected()) {
-            connectionFailedCounter.newRequest();
+            lastConnectionFailure = System.currentTimeMillis();
         }
     }
 
@@ -383,6 +384,7 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                         String lockPath = range + "/lock";
                         InterProcessSemaphoreMutex lock = zooClient.getLock(lockPath);
                         if (acquireLock(lock, 100, MILLISECONDS)) {
+                            long rangeStartTime = System.currentTimeMillis();
                             try {
                                 if (isStatusCompleted(statusPath)) {
                                     completed++;
@@ -405,7 +407,7 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
                                     }
                                     offset += OFFSET_READING;
                                     zooClient.putLongToPath(range + "/offset", offset);
-                                    if (connectionFailedCounter.getRequestsCount() > 0) {
+                                    if (lastConnectionFailure > rangeStartTime) {
                                         throw new InterruptedException("Connection failed during calculations, lock is dirty");
                                     }
                                 }

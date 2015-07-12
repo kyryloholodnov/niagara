@@ -385,6 +385,10 @@ public class ZooClient implements DisposableBean {
         return state == STARTED && zooClient.getZookeeperClient().isConnected();
     }
 
+    public void close() {
+        zooClient.close();
+    }
+
     /**
      * Releases given lock.
      *

@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.github.holodnov</groupId>
-    <artifactId>career-cup</artifactId>
+    <artifactId>careercup</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
 

@@ -6,23 +6,21 @@ import com.github.holodnov.graph.http.Response;
 import com.github.holodnov.graph.service.GraphService;
 import com.github.holodnov.graph.zoo.ZooException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 import static com.github.holodnov.graph.http.RequestUtils.appendEdges;
 import static com.github.holodnov.graph.http.RequestUtils.getGraphWithVertices;
 import static com.github.holodnov.graph.service.Status.COMPLETED;
 import static com.github.holodnov.graph.service.Status.UNCOMPLETED;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
  * @author Kyrylo Holodnov
  */
-@Controller
+@RestController
 public class GraphController {
 
     @Autowired
@@ -32,7 +30,8 @@ public class GraphController {
             method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
     public Response getDAGForestMaxWeightSingleThread(@RequestParam String vertices,
-                                                      @RequestParam(required = false) String edges) throws UnparseableGraphDataException {
+                                                      @RequestParam(required = false) String edges)
+            throws UnparseableGraphDataException {
         long start = System.currentTimeMillis();
         DirectedGraph graph = (DirectedGraph) getGraphWithVertices(vertices, true);
         appendEdges(graph, edges);
@@ -84,5 +83,11 @@ public class GraphController {
     public Response getDAGForestMaxWeighDistributedResult(@RequestParam String graphId)
             throws ZooException, IOException {
         return graphService.getDAGForestMaxWeighDistributedResult(graphId);
+    }
+
+    @ResponseStatus(BAD_REQUEST)
+    @ExceptionHandler
+    private Response handleUnparseableGraphDataException(UnparseableGraphDataException e, HttpServletResponse response) {
+        return new Response().setError(e.getMessage());
     }
 }
