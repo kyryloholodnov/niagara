@@ -8,11 +8,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 
+import static com.github.holodnov.algorithms.requests.FastRequestsCounter.getSecondRequestsCounter;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
-import static com.github.holodnov.algorithms.requests.FastRequestsCounter.getSecondRequestsCounter;
 
 /**
  * @author Kyrylo Holodnov

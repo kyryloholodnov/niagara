@@ -1,8 +1,9 @@
 package com.github.holodnov.algorithms.levenshtein;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
+
 import static com.github.holodnov.algorithms.levenshtein.BasicEditDistance.getEditDistance;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author Kyrylo Holodnov
@@ -10,13 +11,13 @@ import static com.github.holodnov.algorithms.levenshtein.BasicEditDistance.getEd
 public class BasicEditDistanceTest {
 
     private static final double EPSILON = 0.0000001;
-    private static final OperationsWeights hugeSubstitutionOperationsWeights
-            = new OperationsWeights() {
-                @Override
-                public double getSubstitutionWeight(char oldChar, char newChar) {
-                    return 1.5;
-                }
-            };
+    private static final OperationsWeights hugeSubstitutionOperationsWeights = new OperationsWeights() {
+
+        @Override
+        public double getSubstitutionWeight(char oldChar, char newChar) {
+            return 1.5;
+        }
+    };
 
     @Test(expected = IllegalArgumentException.class)
     public void testGetEditDistanceFirstIsNull() {

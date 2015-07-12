@@ -8,6 +8,7 @@ import java.util.Iterator;
 
 import static com.github.holodnov.algorithms.graph.GraphAlgorithms.getClusteringComponents;
 import static com.github.holodnov.algorithms.graph.GraphAlgorithms.getMinimumSpanningTree;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
@@ -47,7 +48,7 @@ public class GraphAlgorithmsTest {
         // Expected clusters: {0, 1, 2}, {3}
         assertArrayEquals(new HashSet[]{
                 new HashSet<>(Arrays.asList(0, 1, 2)),
-                new HashSet<>(Arrays.asList(3))
+                new HashSet<>(singletonList(3))
         }, result.getClusters());
         assertEquals(3, result.getMaxSpacing(), EPSILON);
         assertEquals(2, result.getMaxSpacingFirstVertex());
@@ -66,8 +67,8 @@ public class GraphAlgorithmsTest {
         // Expected clusters: {0, 1}, {2}, {3}
         assertArrayEquals(new HashSet[]{
                 new HashSet<>(Arrays.asList(0, 1)),
-                new HashSet<>(Arrays.asList(2)),
-                new HashSet<>(Arrays.asList(3))
+                new HashSet<>(singletonList(2)),
+                new HashSet<>(singletonList(3))
         }, result.getClusters());
         assertEquals(2, result.getMaxSpacing(), EPSILON);
         assertEquals(1, result.getMaxSpacingFirstVertex());

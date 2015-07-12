@@ -9,9 +9,9 @@ import static java.lang.Math.min;
  * <b>O(mn)</b> and space complexity is <b>O(min(m,n))</b>, where <b>m</b> and
  * <b>n</b> are the lengths of the strings.
  *
+ * @author Kyrylo Holodnov
  * @see <a
  * href="http://en.wikipedia.org/wiki/Edit_distance">http://en.wikipedia.org/wiki/Edit_distance</a>
- * @author Kyrylo Holodnov
  */
 public final class BasicEditDistance {
 
@@ -38,16 +38,16 @@ public final class BasicEditDistance {
      * Calculates edit distance between 2 char sequences and given operations
      * weights.
      *
-     * @param s 1st sequence of chars
-     * @param t 2nd sequence of chars
+     * @param s                 1st sequence of chars
+     * @param t                 2nd sequence of chars
      * @param operationsWeights operations weights object
      * @return edit distance
      * @throws IllegalArgumentException if any sequence of chars is null or
-     * operations weights object is null
+     *                                  operations weights object is null
      */
     public static double getEditDistance(CharSequence s,
-            CharSequence t,
-            OperationsWeights operationsWeights) {
+                                         CharSequence t,
+                                         OperationsWeights operationsWeights) {
         if (s == null) {
             throw new IllegalArgumentException("First sequence of chars is null");
         }

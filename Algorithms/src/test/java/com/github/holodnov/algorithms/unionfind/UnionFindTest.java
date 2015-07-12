@@ -1,7 +1,9 @@
 package com.github.holodnov.algorithms.unionfind;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Kyrylo Holodnov

@@ -26,8 +26,7 @@ public class UnionFind {
      */
     public UnionFind(int n) {
         if (n <= 0) {
-            throw new IllegalArgumentException("Initial number of components "
-                    + "should be positive");
+            throw new IllegalArgumentException("Initial number of components should be positive");
         }
         this.n = n;
         subsetsCount = n;
