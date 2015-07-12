@@ -17,10 +17,6 @@ import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -50,8 +46,7 @@ import static org.apache.curator.utils.PathUtils.validatePath;
 /**
  * @author Kyrylo Holodnov
  */
-@Service
-public class GraphService implements InitializingBean, DisposableBean, ConnectionStateListener {
+public class GraphService implements ConnectionStateListener {
 
     private static final Logger log = LoggerFactory.getLogger(GraphService.class);
     private static final long RANGE_COUNT = 1L << 10;
@@ -70,7 +65,6 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
         this(null, null);
     }
 
-    @Autowired
     public GraphService(ZooClient zooClient, UINT64Generator uint64Generator) throws Exception {
         this(zooClient, uint64Generator, getProperty("zookeeper.graph.root.path", "/graphs"), 3 * getRuntime().availableProcessors());
     }
@@ -79,9 +73,6 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
         this.zooClient = zooClient;
         this.uint64Generator = uint64Generator;
         this.graphPath = validatePath(graphPath);
-        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/completed");
-        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/calculations");
-        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/uncompleted");
         this.nThreads = nThreads;
         graphProcessingExecutor = newFixedThreadPool(nThreads);
         nodeProcessingExecutor = newSingleThreadExecutor();
@@ -309,8 +300,10 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
         return buffer.getDouble();
     }
 
-    @Override
-    public void afterPropertiesSet() throws Exception {
+    public void start() throws Exception {
+        log.info("Starting GraphService bean...");
+        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/completed");
+        zooClient.createOrUpdatePath(this.graphPath + "/dag_forest_max_weight/calculations");
         String uncompletedPath = graphPath + "/dag_forest_max_weight/uncompleted";
         zooClient.createOrUpdatePath(uncompletedPath);
         PathChildrenCache cache = new PathChildrenCache(zooClient.getZooClient(), uncompletedPath, true);
@@ -324,8 +317,7 @@ public class GraphService implements InitializingBean, DisposableBean, Connectio
         cache.getListenable().addListener(listener);
     }
 
-    @Override
-    public void destroy() {
+    public void close() {
         log.debug("Destroying GraphService bean...");
         graphProcessingExecutor.shutdownNow();
         nodeProcessingExecutor.shutdownNow();

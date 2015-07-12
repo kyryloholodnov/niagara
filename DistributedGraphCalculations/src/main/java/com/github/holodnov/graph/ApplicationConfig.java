@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.github.holodnov.graph.generator.UINT64Generator;
+import com.github.holodnov.graph.service.GraphService;
 import com.github.holodnov.graph.zoo.ZooClient;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -33,5 +34,12 @@ public class ApplicationConfig {
     @Bean(destroyMethod = "close")
     public ZooClient zooClient() throws Exception {
         return new ZooClient();
+    }
+
+    @Bean(destroyMethod = "close")
+    public GraphService graphService(ZooClient zooClient, UINT64Generator uint64Generator) throws Exception {
+        GraphService graphService = new GraphService(zooClient, uint64Generator);
+        graphService.start();
+        return graphService;
     }
 }
