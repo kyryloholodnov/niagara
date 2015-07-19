@@ -2,6 +2,8 @@ package com.github.holodnov.careercup;
 
 import java.util.PriorityQueue;
 
+import static java.util.Arrays.copyOf;
+
 /**
  * @author Kyrylo Holodnov
  * @see <a
@@ -19,7 +21,7 @@ public class FindNthMaxNumber {
         if (sequence.length < n) {
             throw new IllegalArgumentException("Array size is less than input n");
         }
-        return findNthMaxNumberUsingSelectionSearch(sequence, n - 1, 0, sequence.length - 1);
+        return findNthMaxNumberUsingSelectionSearch(copyOf(sequence, sequence.length), n - 1, 0, sequence.length - 1);
     }
 
     private static int findNthMaxNumberUsingSelectionSearch(int[] sequence, int n, int left, int right) {
