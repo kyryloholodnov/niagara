@@ -1,81 +1,49 @@
 package com.github.holodnov.careercup;
 
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.Collection;
+
 import static com.github.holodnov.careercup.RemoveDuplicatesFromArray.removeDuplicates;
+import static java.util.Arrays.asList;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
-import org.junit.Test;
-
 /**
- * @see <a
- *      href="http://www.careercup.com/question?id=22360665">http://www.careercup.com/question?id=22360665</a>
- * 
  * @author Kyrylo Holodnov
+ * @see <a
+ * href="http://www.careercup.com/question?id=22360665">http://www.careercup.com/question?id=22360665</a>
  */
+@RunWith(Parameterized.class)
 public class RemoveDuplicatesFromArrayTest {
-    @Test
-    public void testRemoveDuplicatesWithNullArray() {
-	int[] sequence = null;
-	int[] res = removeDuplicates(sequence);
-	assertNull("Result should be null", res);
+
+    private final int[] actual;
+    private final int[] expected;
+
+    public RemoveDuplicatesFromArrayTest(int[] actual, int[] expected) {
+        this.actual = actual;
+        this.expected = expected;
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return asList(
+                new Object[]{null, null},
+                new Object[]{new int[0], new int[0]},
+                new Object[]{new int[]{5}, new int[]{5}},
+                new Object[]{new int[]{1, 2, 3, 2, 1}, new int[]{1, 2, 3}},
+                new Object[]{new int[]{3, 2, 4, 3, 5, 4}, new int[]{3, 2, 4, 5}},
+                new Object[]{new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+                new Object[]{new int[]{1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 10}, new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+                new Object[]{new int[]{5, 5, 5, 5, 5}, new int[]{5}},
+                new Object[]{new int[]{5, 5, 5, 5, 5, 1, 1}, new int[]{5, 1}}
+        );
     }
 
     @Test
-    public void testRemoveDuplicatesWithZeroArray() {
-	int[] sequence = new int[0];
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result should be an empty array", res, is(new int[0]));
-    }
-
-    @Test
-    public void testRemoveDuplicates1() {
-	int[] sequence = new int[] { 5 };
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result is not matched", res, is(new int[] { 5 }));
-    }
-
-    @Test
-    public void testRemoveDuplicates2() {
-	int[] sequence = new int[] { 1, 2, 3, 2, 1 };
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result is not matched", res, is(new int[] { 1, 2, 3 }));
-    }
-
-    @Test
-    public void testRemoveDuplicates3() {
-	int[] sequence = new int[] { 3, 2, 4, 3, 5, 4 };
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result is not matched", res, is(new int[] { 3, 2, 4, 5 }));
-    }
-
-    @Test
-    public void testRemoveDuplicates4() {
-	int[] sequence = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result is not matched", res, is(new int[] { 1, 2, 3, 4, 5,
-		6, 7, 8, 9, 10 }));
-    }
-
-    @Test
-    public void testRemoveDuplicates5() {
-	int[] sequence = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 10 };
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result is not matched", res, is(new int[] { 1, 2, 3, 4, 5,
-		6, 7, 8, 9, 10 }));
-    }
-
-    @Test
-    public void testRemoveDuplicates6() {
-	int[] sequence = new int[] { 5, 5, 5, 5, 5 };
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result is not matched", res, is(new int[] { 5 }));
-    }
-
-    @Test
-    public void testRemoveDuplicates7() {
-	int[] sequence = new int[] { 5, 5, 5, 5, 5, 1, 1 };
-	int[] res = removeDuplicates(sequence);
-	assertThat("Result is not matched", res, is(new int[] { 5, 1 }));
+    public void testRemoveDuplicates() {
+        assertThat(removeDuplicates(actual), is(expected));
     }
 }
