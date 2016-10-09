@@ -14,6 +14,7 @@ public class UnionFind {
     private final int n;
     private final int[] roots;
     private final int[] ranks;
+    private final int[] sizes;
 
     private int subsetsCount;
 
@@ -32,8 +33,10 @@ public class UnionFind {
         subsetsCount = n;
         roots = new int[n];
         ranks = new int[n];
+        sizes = new int[n];
         for (int i = 0; i < roots.length; i++) {
             roots[i] = i;
+            sizes[i] = 1;
         }
     }
 
@@ -74,14 +77,28 @@ public class UnionFind {
         }
         if (ranks[firstRoot] < ranks[secondRoot]) {
             roots[firstRoot] = secondRoot;
+            sizes[secondRoot] += sizes[firstRoot];
         } else if (ranks[firstRoot] > ranks[secondRoot]) {
             roots[secondRoot] = firstRoot;
+            sizes[firstRoot] += sizes[secondRoot];
         } else {
             roots[firstRoot] = secondRoot;
+            sizes[secondRoot] += sizes[firstRoot];
             ranks[secondRoot]++;
         }
         subsetsCount--;
         return roots[firstRoot];
+    }
+
+    /**
+     * Determines subset size an input element is in.
+     *
+     * @param i input element
+     * @return size of subset an input element is in
+     * @throws IllegalArgumentException if input element out of bounds
+     */
+    public int getSubsetSize(int i) {
+        return sizes[find(i)];
     }
 
     /**

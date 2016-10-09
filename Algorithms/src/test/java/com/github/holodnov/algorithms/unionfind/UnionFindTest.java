@@ -44,17 +44,38 @@ public class UnionFindTest {
         unionFind.union(1, 5);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testSubsetSizeIllegalArgument1() {
+        UnionFind unionFind = new UnionFind(5);
+        unionFind.getSubsetSize(-1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSubsetSizeIllegalArgument2() {
+        UnionFind unionFind = new UnionFind(5);
+        unionFind.getSubsetSize(5);
+    }
+
     @Test
-    public void testUnionFindGetSubsetsCount() {
+    public void testUnionFindGetSubsetSizeGetSubsetsCount() {
         UnionFind unionFind = new UnionFind(5);
         assertEquals(5, unionFind.getSubsetsCount());
+        assertEquals(1, unionFind.getSubsetSize(0));
+        assertEquals(1, unionFind.getSubsetSize(4));
         int unionResult = unionFind.union(1, 2);
         assertTrue(unionResult == 1 || unionResult == 2);
+        assertEquals(2, unionFind.getSubsetSize(1));
+        assertEquals(2, unionFind.getSubsetSize(2));
+        assertEquals(1, unionFind.getSubsetSize(4));
         assertEquals(4, unionFind.getSubsetsCount());
         assertTrue(unionFind.find(1) == 1 || unionFind.find(1) == 2);
         assertTrue(unionFind.find(2) == 1 || unionFind.find(2) == 2);
         unionResult = unionFind.union(1, 4);
         assertTrue(unionResult == 1 || unionResult == 2 || unionResult == 4);
+        assertEquals(3, unionFind.getSubsetSize(1));
+        assertEquals(3, unionFind.getSubsetSize(2));
+        assertEquals(1, unionFind.getSubsetSize(3));
+        assertEquals(3, unionFind.getSubsetSize(4));
         assertEquals(3, unionFind.getSubsetsCount());
         assertTrue(unionFind.find(1) == 1 || unionFind.find(1) == 2 || unionFind.find(1) == 4);
         assertTrue(unionFind.find(2) == 1 || unionFind.find(2) == 2 || unionFind.find(2) == 4);
